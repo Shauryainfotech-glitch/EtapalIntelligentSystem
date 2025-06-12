@@ -419,16 +419,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveAiApiEndpoint(provider: string, model?: string): Promise<AIApiEndpoint | undefined> {
-    let query = db
-      .select()
-      .from(aiApiEndpoints)
-      .where(and(eq(aiApiEndpoints.provider, provider), eq(aiApiEndpoints.isActive, true)));
-    
     if (model) {
-      query = query.where(eq(aiApiEndpoints.model, model));
+      const [endpoint] = await db
+        .select()
+        .from(aiApiEndpoints)
+        .where(and(
+          eq(aiApiEndpoints.provider, provider),
+          eq(aiApiEndpoints.model, model),
+          eq(aiApiEndpoints.isActive, true)
+        ))
+        .limit(1);
+      return endpoint;
     }
     
-    const [endpoint] = await query.limit(1);
+    const [endpoint] = await db
+      .select()
+      .from(aiApiEndpoints)
+      .where(and(
+        eq(aiApiEndpoints.provider, provider),
+        eq(aiApiEndpoints.isActive, true)
+      ))
+      .limit(1);
     return endpoint;
   }
 
@@ -439,26 +450,62 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAiApiUsage(filters: any = {}): Promise<AIApiUsage[]> {
-    let query = db.select().from(aiApiUsage);
+    const conditions = [];
     
     if (filters.endpointId) {
-      query = query.where(eq(aiApiUsage.endpointId, filters.endpointId));
+      conditions.push(eq(aiApiUsage.endpointId, filters.endpointId));
     }
     if (filters.userId) {
-      query = query.where(eq(aiApiUsage.userId, filters.userId));
+      conditions.push(eq(aiApiUsage.userId, filters.userId));
     }
     if (filters.documentId) {
-      query = query.where(eq(aiApiUsage.documentId, filters.documentId));
+      conditions.push(eq(aiApiUsage.documentId, filters.documentId));
     }
     if (filters.requestType) {
-      query = query.where(eq(aiApiUsage.requestType, filters.requestType));
+      conditions.push(eq(aiApiUsage.requestType, filters.requestType));
     }
     
-    return await query.orderBy(desc(aiApiUsage.createdAt));
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(aiApiUsage)
+        .where(and(...conditions))
+        .orderBy(desc(aiApiUsage.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(aiApiUsage)
+      .orderBy(desc(aiApiUsage.createdAt));
   }
 
   async getAiApiUsageStats(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<any> {
-    let query = db
+    const conditions = [];
+    
+    if (endpointId) {
+      conditions.push(eq(aiApiUsage.endpointId, endpointId));
+    }
+    
+    if (dateRange) {
+      conditions.push(sql`${aiApiUsage.createdAt} >= ${dateRange.start}`);
+      conditions.push(sql`${aiApiUsage.createdAt} <= ${dateRange.end}`);
+    }
+
+    if (conditions.length > 0) {
+      const [stats] = await db
+        .select({
+          totalRequests: count(),
+          successfulRequests: count(sql`CASE WHEN ${aiApiUsage.success} = true THEN 1 END`),
+          totalCost: sql<number>`SUM(${aiApiUsage.cost})`.mapWith(Number),
+          avgResponseTime: sql<number>`AVG(${aiApiUsage.responseTime})`.mapWith(Number),
+          totalTokens: sql<number>`SUM(${aiApiUsage.totalTokens})`.mapWith(Number),
+        })
+        .from(aiApiUsage)
+        .where(and(...conditions));
+      return stats;
+    }
+
+    const [stats] = await db
       .select({
         totalRequests: count(),
         successfulRequests: count(sql`CASE WHEN ${aiApiUsage.success} = true THEN 1 END`),
@@ -467,21 +514,6 @@ export class DatabaseStorage implements IStorage {
         totalTokens: sql<number>`SUM(${aiApiUsage.totalTokens})`.mapWith(Number),
       })
       .from(aiApiUsage);
-
-    if (endpointId) {
-      query = query.where(eq(aiApiUsage.endpointId, endpointId));
-    }
-    
-    if (dateRange) {
-      query = query.where(
-        and(
-          sql`${aiApiUsage.createdAt} >= ${dateRange.start}`,
-          sql`${aiApiUsage.createdAt} <= ${dateRange.end}`
-        )
-      );
-    }
-
-    const [stats] = await query;
     return stats;
   }
 
@@ -552,22 +584,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAiModelPerformance(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<AIModelPerformance[]> {
-    let query = db.select().from(aiModelPerformance);
+    const conditions = [];
     
     if (endpointId) {
-      query = query.where(eq(aiModelPerformance.endpointId, endpointId));
+      conditions.push(eq(aiModelPerformance.endpointId, endpointId));
     }
     
     if (dateRange) {
-      query = query.where(
-        and(
-          sql`${aiModelPerformance.date} >= ${dateRange.start}`,
-          sql`${aiModelPerformance.date} <= ${dateRange.end}`
-        )
-      );
+      conditions.push(sql`${aiModelPerformance.date} >= ${dateRange.start}`);
+      conditions.push(sql`${aiModelPerformance.date} <= ${dateRange.end}`);
     }
     
-    return await query.orderBy(desc(aiModelPerformance.date));
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(aiModelPerformance)
+        .where(and(...conditions))
+        .orderBy(desc(aiModelPerformance.date));
+    }
+    
+    return await db
+      .select()
+      .from(aiModelPerformance)
+      .orderBy(desc(aiModelPerformance.date));
   }
 
   async updateDailyPerformanceMetrics(endpointId: string, metrics: any): Promise<void> {
@@ -617,16 +656,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkflowQueue(assignedTo?: string): Promise<DocumentWorkflow[]> {
-    let query = db
-      .select()
-      .from(documentWorkflow)
-      .where(sql`${documentWorkflow.status} IN ('pending', 'processing')`);
-    
     if (assignedTo) {
-      query = query.where(eq(documentWorkflow.assignedTo, assignedTo));
+      return await db
+        .select()
+        .from(documentWorkflow)
+        .where(
+          and(
+            sql`${documentWorkflow.status} IN ('pending', 'processing')`,
+            eq(documentWorkflow.assignedTo, assignedTo)
+          )
+        )
+        .orderBy(documentWorkflow.dueDate, documentWorkflow.createdAt);
     }
     
-    return await query.orderBy(documentWorkflow.dueDate, documentWorkflow.createdAt);
+    return await db
+      .select()
+      .from(documentWorkflow)
+      .where(sql`${documentWorkflow.status} IN ('pending', 'processing')`)
+      .orderBy(documentWorkflow.dueDate, documentWorkflow.createdAt);
   }
 }
 

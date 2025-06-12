@@ -110,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error processing document with AI:", error);
           await storage.updateDocument(document.id, { 
             status: "failed",
-            ocrText: `Processing failed: ${error.message}`,
+            ocrText: `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
             processedBy: userId,
           });
         }
