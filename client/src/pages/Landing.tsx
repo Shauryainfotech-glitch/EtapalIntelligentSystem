@@ -12,7 +12,7 @@ export default function Landing() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
-        title: "Welcome to ई-ट्याल Advanced",
+        title: "Welcome to e Patra (ई-पत्र)",
         description: "Please log in to access the document management system.",
       });
     }
@@ -66,7 +66,7 @@ export default function Landing() {
             </div>
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-4 font-devanagari">
-            ई-ट्याल Advanced System
+            e Patra (ई-पत्र) Advanced System
           </h1>
           <p className="text-xl text-gray-600 mb-2">
             जिल्हा पोलिस कार्यालय अहमदनगर

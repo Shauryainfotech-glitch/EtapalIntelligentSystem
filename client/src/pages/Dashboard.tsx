@@ -62,7 +62,7 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           title={TAB_TITLES[activeTab as keyof typeof TAB_TITLES] || activeTab}
-          subtitle="Advanced Document Management System"
+          subtitle="e Patra (ई-पत्र) - Advanced Document Management System"
         />
         
         <main className="flex-1 overflow-y-auto p-6">
