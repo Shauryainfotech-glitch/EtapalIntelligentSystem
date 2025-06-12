@@ -262,6 +262,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Analysis endpoint
+  app.post("/api/ai/analyze", isAuthenticated, async (req: any, res) => {
+    try {
+      const { documentId, analysisType } = req.body;
+      
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      let result;
+      switch (analysisType) {
+        case "summary":
+          result = await generateDocumentSummary(document.ocrText || "");
+          break;
+        case "classification":
+          const classification = await processDocumentWithAI(document.ocrText || "", document.fileName);
+          result = classification.aiAnalysis;
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid analysis type" });
+      }
+
+      res.json({ result, documentId, analysisType });
+    } catch (error) {
+      console.error("Error in AI analysis:", error);
+      res.status(500).json({ message: "AI analysis failed" });
+    }
+  });
+
   // Analytics routes
   app.get('/api/analytics/documents', isAuthenticated, async (req, res) => {
     try {

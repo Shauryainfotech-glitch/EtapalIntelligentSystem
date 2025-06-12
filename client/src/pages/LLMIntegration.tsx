@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,15 +25,31 @@ import {
   DollarSign,
   Activity,
   Cpu,
-  Database
+  Database,
+  Eye
 } from "lucide-react";
 
 export default function LLMIntegration() {
   const [selectedModel, setSelectedModel] = useState("gpt-4-turbo");
   const [confidenceThreshold, setConfidenceThreshold] = useState(90);
+  const [selectedDocument, setSelectedDocument] = useState("");
+  const [analysisResult, setAnalysisResult] = useState("");
 
   const { data: processingStats } = useQuery({
     queryKey: ['/api/analytics/processing'],
+  });
+
+  const { data: documents = [] } = useQuery({
+    queryKey: ['/api/documents'],
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async ({ documentId, analysisType }: { documentId: string; analysisType: string }) => {
+      return await apiRequest("/api/ai/analyze", "POST", { documentId, analysisType });
+    },
+    onSuccess: (data: any) => {
+      setAnalysisResult(data.result);
+    },
   });
 
   const llmModels = [
@@ -170,9 +187,10 @@ export default function LLMIntegration() {
       </div>
 
       <Tabs defaultValue="models" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="models">LLM Models</TabsTrigger>
           <TabsTrigger value="configuration">Configuration</TabsTrigger>
+          <TabsTrigger value="testing">AI Testing</TabsTrigger>
           <TabsTrigger value="pipeline">Processing Pipeline</TabsTrigger>
           <TabsTrigger value="analytics">Performance Analytics</TabsTrigger>
         </TabsList>
@@ -451,6 +469,100 @@ export default function LLMIntegration() {
                   AI automatically switches between models based on task complexity and cost efficiency.
                   Current pipeline optimized for 96.7% accuracy with 2.3s average processing time.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="testing" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Zap className="h-5 w-5 mr-2" />
+                Real-time AI Document Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Document for Analysis
+                  </label>
+                  <Select value={selectedDocument} onValueChange={setSelectedDocument}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a document" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.isArray(documents) && documents.map((doc: any) => (
+                        <SelectItem key={doc.id} value={doc.id}>
+                          {doc.originalFileName || doc.fileName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-2 items-end">
+                  <Button
+                    onClick={() => selectedDocument && analyzeMutation.mutate({ 
+                      documentId: selectedDocument, 
+                      analysisType: "summary" 
+                    })}
+                    disabled={!selectedDocument || analyzeMutation.isPending}
+                    className="flex-1"
+                  >
+                    {analyzeMutation.isPending ? "Analyzing..." : "Generate Summary"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => selectedDocument && analyzeMutation.mutate({ 
+                      documentId: selectedDocument, 
+                      analysisType: "classification" 
+                    })}
+                    disabled={!selectedDocument || analyzeMutation.isPending}
+                    className="flex-1"
+                  >
+                    Classify Document
+                  </Button>
+                </div>
+              </div>
+
+              {analysisResult && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h4 className="font-medium text-green-900 mb-2">AI Analysis Result</h4>
+                  <div className="text-sm text-green-800 whitespace-pre-wrap">
+                    {typeof analysisResult === 'string' ? analysisResult : JSON.stringify(analysisResult, null, 2)}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <Bot className="h-5 w-5 text-blue-600 mr-2" />
+                    <span className="font-medium text-blue-900">GPT-4 Turbo</span>
+                  </div>
+                  <p className="text-sm text-blue-800">Advanced document analysis with 96.7% accuracy</p>
+                  <Badge variant="default" className="mt-2">Active</Badge>
+                </div>
+                
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <Eye className="h-5 w-5 text-purple-600 mr-2" />
+                    <span className="font-medium text-purple-900">Google Vision</span>
+                  </div>
+                  <p className="text-sm text-purple-800">OCR processing for document text extraction</p>
+                  <Badge variant="secondary" className="mt-2">Active</Badge>
+                </div>
+                
+                <div className="p-4 bg-orange-50 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <Languages className="h-5 w-5 text-orange-600 mr-2" />
+                    <span className="font-medium text-orange-900">Marathi Support</span>
+                  </div>
+                  <p className="text-sm text-orange-800">Native support for Marathi government documents</p>
+                  <Badge variant="outline" className="mt-2">Optimized</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
