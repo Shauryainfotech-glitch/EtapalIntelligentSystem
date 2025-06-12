@@ -141,32 +141,33 @@ export default function Analytics() {
   const isLoading = documentStatsLoading || processingStatsLoading || userStatsLoading;
 
   // Calculate metrics from actual data
-  const totalDocuments = documentStats?.total || 0;
-  const processedDocuments = documentStats?.processed || 0;
-  const pendingDocuments = documentStats?.pending || 0;
-  const averageConfidence = processingStats?.averageConfidence || 0;
-  const totalUsers = userStats?.total || 0;
-  const activeUsers = userStats?.active || 0;
+  const totalDocuments = (documentStats as any)?.total || 0;
+  const processedDocuments = (documentStats as any)?.processed || 0;
+  const pendingDocuments = (documentStats as any)?.pending || 0;
+  const averageConfidence = (processingStats as any)?.averageConfidence || 0;
+  const totalUsers = (userStats as any)?.total || 0;
+  const activeUsers = (userStats as any)?.active || 0;
 
   // Calculate document type distribution
-  const documentTypeDistribution = documents?.reduce((acc: any, doc: any) => {
+  const documentTypeDistribution = Array.isArray(documents) ? (documents as any[]).reduce((acc: any, doc: any) => {
     const type = doc.letterType || doc.subject || 'अन्य';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
-  }, {}) || {};
+  }, {}) : {};
 
   const topDocumentTypes = Object.entries(documentTypeDistribution)
     .sort(([,a], [,b]) => (b as number) - (a as number))
     .slice(0, 5);
 
-  const maxDocumentTypeCount = Math.max(...Object.values(documentTypeDistribution));
+  const documentTypeValues = Object.values(documentTypeDistribution) as number[];
+  const maxDocumentTypeCount = documentTypeValues.length > 0 ? Math.max(...documentTypeValues) : 0;
 
   // Calculate processing timeline (last 7 days)
-  const processingTimeline = documents?.reduce((acc: any, doc: any) => {
+  const processingTimeline = Array.isArray(documents) ? (documents as any[]).reduce((acc: any, doc: any) => {
     const date = new Date(doc.createdAt).toDateString();
     acc[date] = (acc[date] || 0) + 1;
     return acc;
-  }, {}) || {};
+  }, {}) : {};
 
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
@@ -464,7 +465,7 @@ export default function Analytics() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">High Confidence (>95%)</span>
+                      <span className="text-gray-600">High Confidence ({'>'}95%)</span>
                       <span className="font-medium text-green-600">78%</span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -472,7 +473,7 @@ export default function Analytics() {
                       <span className="font-medium text-yellow-600">18%</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Low Confidence (<80%)</span>
+                      <span className="text-gray-600">Low Confidence ({'<'}80%)</span>
                       <span className="font-medium text-red-600">4%</span>
                     </div>
                   </div>

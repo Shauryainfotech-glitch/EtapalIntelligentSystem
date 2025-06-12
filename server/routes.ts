@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const mockOCRResults = {
             status: "processed",
-            ocrConfidence: 96.7,
+            ocrConfidence: "96.70",
             ocrText: "शासकीय पत्र\nमहाराष्ट्र राज्य\nजिल्हा पोलिस कार्यालय अहमदनगर\n\nपत्र क्रमांक: २३४५/२०२४\nदिनांक: १३/०६/२०२४\n\nविषय: नवीन योजना संदर्भात",
             extractedData: {
               office: "जिल्हा पोलिस कार्यालय अहमदनगर",
