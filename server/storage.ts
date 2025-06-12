@@ -160,23 +160,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocuments(filters: any = {}): Promise<Document[]> {
-    let query = db.select().from(documents);
+    const conditions = [];
     
     if (filters.status) {
-      query = query.where(eq(documents.status, filters.status));
+      conditions.push(eq(documents.status, filters.status));
     }
     
     if (filters.letterType) {
-      query = query.where(eq(documents.letterType, filters.letterType));
+      conditions.push(eq(documents.letterType, filters.letterType));
     }
     
     if (filters.search) {
-      query = query.where(
+      conditions.push(
         sql`${documents.subject} ILIKE ${`%${filters.search}%`} OR ${documents.topic} ILIKE ${`%${filters.search}%`}`
       );
     }
     
-    return query.orderBy(desc(documents.createdAt));
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(documents)
+        .where(and(...conditions))
+        .orderBy(desc(documents.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(documents)
+      .orderBy(desc(documents.createdAt));
   }
 
   async updateDocument(id: string, updates: Partial<Document>): Promise<Document> {
@@ -254,13 +265,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCommunicationLogs(filters: any = {}): Promise<CommunicationLog[]> {
-    let query = db.select().from(communicationLogs);
-    
     if (filters.type) {
-      query = query.where(eq(communicationLogs.type, filters.type));
+      return await db
+        .select()
+        .from(communicationLogs)
+        .where(eq(communicationLogs.type, filters.type))
+        .orderBy(desc(communicationLogs.createdAt));
     }
     
-    return query.orderBy(desc(communicationLogs.createdAt));
+    return await db
+      .select()
+      .from(communicationLogs)
+      .orderBy(desc(communicationLogs.createdAt));
   }
 
   async updateCommunicationLog(id: string, updates: Partial<CommunicationLog>): Promise<CommunicationLog> {
@@ -282,17 +298,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(filters: any = {}): Promise<AuditLog[]> {
-    let query = db.select().from(auditLogs);
+    if (filters.userId && filters.action) {
+      return await db
+        .select()
+        .from(auditLogs)
+        .where(and(eq(auditLogs.userId, filters.userId), eq(auditLogs.action, filters.action)))
+        .orderBy(desc(auditLogs.createdAt));
+    }
     
     if (filters.userId) {
-      query = query.where(eq(auditLogs.userId, filters.userId));
+      return await db
+        .select()
+        .from(auditLogs)
+        .where(eq(auditLogs.userId, filters.userId))
+        .orderBy(desc(auditLogs.createdAt));
     }
     
     if (filters.action) {
-      query = query.where(eq(auditLogs.action, filters.action));
+      return await db
+        .select()
+        .from(auditLogs)
+        .where(eq(auditLogs.action, filters.action))
+        .orderBy(desc(auditLogs.createdAt));
     }
     
-    return query.orderBy(desc(auditLogs.createdAt));
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt));
   }
 
   // Cloud storage operations
