@@ -148,6 +148,112 @@ export const cloudStorage = pgTable("cloud_storage", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// AI API Integration Tables
+export const aiApiEndpoints = pgTable("ai_api_endpoints", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  provider: varchar("provider", { length: 50 }).notNull(), // 'openai', 'google', 'anthropic'
+  endpoint: varchar("endpoint", { length: 500 }).notNull(),
+  apiKey: varchar("api_key", { length: 255 }).notNull(),
+  model: varchar("model", { length: 100 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  rateLimit: integer("rate_limit").default(100), // requests per minute
+  timeout: integer("timeout").default(30000), // milliseconds
+  retryAttempts: integer("retry_attempts").default(3),
+  configuration: jsonb("configuration"), // model-specific configs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const aiApiUsage = pgTable("ai_api_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  endpointId: uuid("endpoint_id").references(() => aiApiEndpoints.id).notNull(),
+  requestId: varchar("request_id", { length: 100 }).notNull(),
+  userId: varchar("user_id", { length: 255 }),
+  documentId: uuid("document_id").references(() => documents.id),
+  requestType: varchar("request_type", { length: 50 }).notNull(), // 'ocr', 'analysis', 'classification'
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  totalTokens: integer("total_tokens"),
+  cost: decimal("cost", { precision: 10, scale: 4 }),
+  responseTime: integer("response_time"), // milliseconds
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  requestData: jsonb("request_data"),
+  responseData: jsonb("response_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const ocrResults = pgTable("ocr_results", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").references(() => documents.id).notNull(),
+  apiUsageId: uuid("api_usage_id").references(() => aiApiUsage.id),
+  extractedText: text("extracted_text").notNull(),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }),
+  language: varchar("language", { length: 10 }).default("mr"), // 'mr' for Marathi, 'en' for English
+  boundingBoxes: jsonb("bounding_boxes"), // word/line coordinates
+  textBlocks: jsonb("text_blocks"), // structured text blocks
+  handwritingDetected: boolean("handwriting_detected").default(false),
+  qualityScore: decimal("quality_score", { precision: 5, scale: 2 }),
+  processingTime: integer("processing_time"), // milliseconds
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const documentAnalysis = pgTable("document_analysis", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").references(() => documents.id).notNull(),
+  apiUsageId: uuid("api_usage_id").references(() => aiApiUsage.id),
+  analysisType: varchar("analysis_type", { length: 50 }).notNull(), // 'classification', 'extraction', 'summarization'
+  extractedFields: jsonb("extracted_fields"), // structured field data
+  documentType: varchar("document_type", { length: 100 }),
+  subject: varchar("subject", { length: 500 }),
+  sender: varchar("sender", { length: 255 }),
+  recipient: varchar("recipient", { length: 255 }),
+  dateExtracted: timestamp("date_extracted"),
+  priority: varchar("priority", { length: 20 }),
+  keywords: text("keywords").array(),
+  entities: jsonb("entities"), // named entities
+  summary: text("summary"),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }),
+  validationStatus: varchar("validation_status", { length: 20 }).default("pending"),
+  validatedBy: varchar("validated_by", { length: 255 }),
+  validatedAt: timestamp("validated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const aiModelPerformance = pgTable("ai_model_performance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  endpointId: uuid("endpoint_id").references(() => aiApiEndpoints.id).notNull(),
+  date: timestamp("date").notNull(),
+  totalRequests: integer("total_requests").default(0),
+  successfulRequests: integer("successful_requests").default(0),
+  failedRequests: integer("failed_requests").default(0),
+  averageResponseTime: decimal("average_response_time", { precision: 10, scale: 2 }),
+  totalTokensUsed: integer("total_tokens_used").default(0),
+  totalCost: decimal("total_cost", { precision: 10, scale: 4 }).default("0"),
+  averageConfidence: decimal("average_confidence", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const documentWorkflow = pgTable("document_workflow", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").references(() => documents.id).notNull(),
+  workflowStep: varchar("workflow_step", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(), // 'pending', 'processing', 'completed', 'failed'
+  assignedTo: varchar("assigned_to", { length: 255 }),
+  aiProcessingRequired: boolean("ai_processing_required").default(false),
+  aiProcessingCompleted: boolean("ai_processing_completed").default(false),
+  approvalRequired: boolean("approval_required").default(false),
+  approvedBy: varchar("approved_by", { length: 255 }),
+  approvedAt: timestamp("approved_at"),
+  comments: text("comments"),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -205,3 +311,17 @@ export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertCloudStorage = z.infer<typeof insertCloudStorageSchema>;
 export type CloudStorage = typeof cloudStorage.$inferSelect;
+
+// AI API Integration Types
+export type AIApiEndpoint = typeof aiApiEndpoints.$inferSelect;
+export type InsertAIApiEndpoint = typeof aiApiEndpoints.$inferInsert;
+export type AIApiUsage = typeof aiApiUsage.$inferSelect;
+export type InsertAIApiUsage = typeof aiApiUsage.$inferInsert;
+export type OCRResult = typeof ocrResults.$inferSelect;
+export type InsertOCRResult = typeof ocrResults.$inferInsert;
+export type DocumentAnalysis = typeof documentAnalysis.$inferSelect;
+export type InsertDocumentAnalysis = typeof documentAnalysis.$inferInsert;
+export type AIModelPerformance = typeof aiModelPerformance.$inferSelect;
+export type InsertAIModelPerformance = typeof aiModelPerformance.$inferInsert;
+export type DocumentWorkflow = typeof documentWorkflow.$inferSelect;
+export type InsertDocumentWorkflow = typeof documentWorkflow.$inferInsert;
