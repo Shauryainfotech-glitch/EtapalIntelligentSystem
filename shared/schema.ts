@@ -10,6 +10,7 @@ import {
   boolean,
   decimal,
   uuid,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -234,7 +235,9 @@ export const aiModelPerformance = pgTable("ai_model_performance", {
   totalCost: decimal("total_cost", { precision: 10, scale: 4 }).default("0"),
   averageConfidence: decimal("average_confidence", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  uniqueEndpointDate: unique().on(table.endpointId, table.date),
+}));
 
 export const documentWorkflow = pgTable("document_workflow", {
   id: uuid("id").primaryKey().defaultRandom(),

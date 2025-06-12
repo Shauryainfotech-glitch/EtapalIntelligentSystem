@@ -67,6 +67,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { icon: Send, text: 'जावक पत्र रजिस्टर', tabKey: 'outward-register' },
     { icon: Brain, text: 'AI OCR Processing', tabKey: 'ai-ocr', count: 3 },
     { icon: Bot, text: 'LLM Integration', tabKey: 'llm-integration' },
+    { icon: FileText, text: 'AI Documentation', tabKey: 'ai-documentation' },
     { icon: MessageSquare, text: 'Communications', tabKey: 'communications', count: 12 },
     { icon: Cloud, text: 'Cloud Storage', tabKey: 'cloud-storage' },
     { icon: Settings, text: 'Field Master', tabKey: 'field-master' },

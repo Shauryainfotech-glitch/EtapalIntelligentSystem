@@ -6,6 +6,7 @@ import DocumentRegister from "./DocumentRegister";
 import FieldMaster from "./FieldMaster";
 import SecurityRBAC from "./SecurityRBAC";
 import LLMIntegration from "./LLMIntegration";
+import DocumentationAI from "./DocumentationAI";
 import Communications from "./Communications";
 import CloudStorage from "./CloudStorage";
 import Analytics from "./Analytics";
