@@ -123,6 +123,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI API Endpoint Management Routes
+  app.get("/api/ai/endpoints", isAuthenticated, async (req, res) => {
+    try {
+      const endpoints = await storage.getAiApiEndpoints();
+      res.json(endpoints);
+    } catch (error) {
+      console.error("Error fetching AI endpoints:", error);
+      res.status(500).json({ message: "Failed to fetch AI endpoints" });
+    }
+  });
+
+  app.post("/api/ai/endpoints", isAuthenticated, async (req, res) => {
+    try {
+      const endpoint = await storage.createAiApiEndpoint(req.body);
+      res.json(endpoint);
+    } catch (error) {
+      console.error("Error creating AI endpoint:", error);
+      res.status(500).json({ message: "Failed to create AI endpoint" });
+    }
+  });
+
+  app.put("/api/ai/endpoints/:id", isAuthenticated, async (req, res) => {
+    try {
+      const endpoint = await storage.updateAiApiEndpoint(req.params.id, req.body);
+      res.json(endpoint);
+    } catch (error) {
+      console.error("Error updating AI endpoint:", error);
+      res.status(500).json({ message: "Failed to update AI endpoint" });
+    }
+  });
+
+  app.delete("/api/ai/endpoints/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteAiApiEndpoint(req.params.id);
+      res.json({ message: "AI endpoint deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting AI endpoint:", error);
+      res.status(500).json({ message: "Failed to delete AI endpoint" });
+    }
+  });
+
+  // AI API Usage and Analytics Routes
+  app.get("/api/ai/usage", isAuthenticated, async (req, res) => {
+    try {
+      const usage = await storage.getAiApiUsage(req.query);
+      res.json(usage);
+    } catch (error) {
+      console.error("Error fetching AI usage:", error);
+      res.status(500).json({ message: "Failed to fetch AI usage" });
+    }
+  });
+
+  app.get("/api/ai/usage/stats", isAuthenticated, async (req, res) => {
+    try {
+      const { endpointId, startDate, endDate } = req.query;
+      const dateRange = startDate && endDate ? {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      } : undefined;
+      
+      const stats = await storage.getAiApiUsageStats(endpointId as string, dateRange);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching AI usage stats:", error);
+      res.status(500).json({ message: "Failed to fetch AI usage stats" });
+    }
+  });
+
+  // OCR Results Routes
+  app.get("/api/documents/:id/ocr", isAuthenticated, async (req, res) => {
+    try {
+      const results = await storage.getOcrResults(req.params.id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching OCR results:", error);
+      res.status(500).json({ message: "Failed to fetch OCR results" });
+    }
+  });
+
+  app.post("/api/documents/:id/ocr", isAuthenticated, async (req, res) => {
+    try {
+      const result = await storage.createOcrResult({
+        documentId: req.params.id,
+        ...req.body
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error creating OCR result:", error);
+      res.status(500).json({ message: "Failed to create OCR result" });
+    }
+  });
+
+  // Document Analysis Routes
+  app.get("/api/documents/:id/analysis", isAuthenticated, async (req, res) => {
+    try {
+      const analyses = await storage.getDocumentAnalysis(req.params.id);
+      res.json(analyses);
+    } catch (error) {
+      console.error("Error fetching document analysis:", error);
+      res.status(500).json({ message: "Failed to fetch document analysis" });
+    }
+  });
+
+  app.post("/api/documents/:id/analysis", isAuthenticated, async (req, res) => {
+    try {
+      const analysis = await storage.createDocumentAnalysis({
+        documentId: req.params.id,
+        ...req.body
+      });
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error creating document analysis:", error);
+      res.status(500).json({ message: "Failed to create document analysis" });
+    }
+  });
+
+  app.post("/api/analysis/:id/validate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const analysis = await storage.validateDocumentAnalysis(req.params.id, userId);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error validating analysis:", error);
+      res.status(500).json({ message: "Failed to validate analysis" });
+    }
+  });
+
+  // AI Model Performance Routes
+  app.get("/api/ai/performance", isAuthenticated, async (req, res) => {
+    try {
+      const { endpointId, startDate, endDate } = req.query;
+      const dateRange = startDate && endDate ? {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      } : undefined;
+      
+      const performance = await storage.getAiModelPerformance(endpointId as string, dateRange);
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching AI performance:", error);
+      res.status(500).json({ message: "Failed to fetch AI performance" });
+    }
+  });
+
+  // Document Workflow Routes
+  app.get("/api/documents/:id/workflow", isAuthenticated, async (req, res) => {
+    try {
+      const workflow = await storage.getDocumentWorkflow(req.params.id);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error fetching document workflow:", error);
+      res.status(500).json({ message: "Failed to fetch document workflow" });
+    }
+  });
+
+  app.post("/api/documents/:id/workflow", isAuthenticated, async (req, res) => {
+    try {
+      const workflow = await storage.createDocumentWorkflow({
+        documentId: req.params.id,
+        ...req.body
+      });
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error creating document workflow:", error);
+      res.status(500).json({ message: "Failed to create document workflow" });
+    }
+  });
+
+  app.put("/api/workflow/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const { status, ...updates } = req.body;
+      const workflow = await storage.updateDocumentWorkflowStatus(req.params.id, status, updates);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error updating workflow status:", error);
+      res.status(500).json({ message: "Failed to update workflow status" });
+    }
+  });
+
+  app.get("/api/workflow/queue", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const assignedTo = req.query.assignedTo || userId;
+      const queue = await storage.getWorkflowQueue(assignedTo as string);
+      res.json(queue);
+    } catch (error) {
+      console.error("Error fetching workflow queue:", error);
+      res.status(500).json({ message: "Failed to fetch workflow queue" });
+    }
+  });
+
   app.get('/api/documents', isAuthenticated, async (req, res) => {
     try {
       const { status, letterType, search } = req.query;

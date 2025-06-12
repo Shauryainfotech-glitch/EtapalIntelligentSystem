@@ -84,6 +84,40 @@ export interface IStorage {
   getDocumentStats(): Promise<any>;
   getProcessingStats(): Promise<any>;
   getUserStats(): Promise<any>;
+
+  // AI API Endpoint operations
+  getAiApiEndpoints(): Promise<AIApiEndpoint[]>;
+  createAiApiEndpoint(endpoint: InsertAIApiEndpoint): Promise<AIApiEndpoint>;
+  updateAiApiEndpoint(id: string, updates: Partial<AIApiEndpoint>): Promise<AIApiEndpoint>;
+  deleteAiApiEndpoint(id: string): Promise<void>;
+  getActiveAiApiEndpoint(provider: string, model?: string): Promise<AIApiEndpoint | undefined>;
+
+  // AI API Usage tracking
+  createAiApiUsage(usage: InsertAIApiUsage): Promise<AIApiUsage>;
+  getAiApiUsage(filters?: any): Promise<AIApiUsage[]>;
+  getAiApiUsageStats(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<any>;
+
+  // OCR Results
+  createOcrResult(result: InsertOCRResult): Promise<OCRResult>;
+  getOcrResults(documentId: string): Promise<OCRResult[]>;
+  updateOcrResult(id: string, updates: Partial<OCRResult>): Promise<OCRResult>;
+
+  // Document Analysis
+  createDocumentAnalysis(analysis: InsertDocumentAnalysis): Promise<DocumentAnalysis>;
+  getDocumentAnalysis(documentId: string): Promise<DocumentAnalysis[]>;
+  updateDocumentAnalysis(id: string, updates: Partial<DocumentAnalysis>): Promise<DocumentAnalysis>;
+  validateDocumentAnalysis(id: string, validatedBy: string): Promise<DocumentAnalysis>;
+
+  // AI Model Performance
+  createAiModelPerformance(performance: InsertAIModelPerformance): Promise<AIModelPerformance>;
+  getAiModelPerformance(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<AIModelPerformance[]>;
+  updateDailyPerformanceMetrics(endpointId: string, metrics: any): Promise<void>;
+
+  // Document Workflow
+  createDocumentWorkflow(workflow: InsertDocumentWorkflow): Promise<DocumentWorkflow>;
+  getDocumentWorkflow(documentId: string): Promise<DocumentWorkflow[]>;
+  updateDocumentWorkflowStatus(id: string, status: string, updates?: Partial<DocumentWorkflow>): Promise<DocumentWorkflow>;
+  getWorkflowQueue(assignedTo?: string): Promise<DocumentWorkflow[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -326,6 +360,240 @@ export class DatabaseStorage implements IStorage {
       total: totalUsers[0].count,
       active: activeUsers[0].count,
     };
+  }
+
+  // AI API Endpoint operations
+  async getAiApiEndpoints(): Promise<AIApiEndpoint[]> {
+    return await db.select().from(aiApiEndpoints).orderBy(desc(aiApiEndpoints.createdAt));
+  }
+
+  async createAiApiEndpoint(endpoint: InsertAIApiEndpoint): Promise<AIApiEndpoint> {
+    const [created] = await db.insert(aiApiEndpoints).values(endpoint).returning();
+    return created;
+  }
+
+  async updateAiApiEndpoint(id: string, updates: Partial<AIApiEndpoint>): Promise<AIApiEndpoint> {
+    const [updated] = await db
+      .update(aiApiEndpoints)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(aiApiEndpoints.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAiApiEndpoint(id: string): Promise<void> {
+    await db.delete(aiApiEndpoints).where(eq(aiApiEndpoints.id, id));
+  }
+
+  async getActiveAiApiEndpoint(provider: string, model?: string): Promise<AIApiEndpoint | undefined> {
+    let query = db
+      .select()
+      .from(aiApiEndpoints)
+      .where(and(eq(aiApiEndpoints.provider, provider), eq(aiApiEndpoints.isActive, true)));
+    
+    if (model) {
+      query = query.where(eq(aiApiEndpoints.model, model));
+    }
+    
+    const [endpoint] = await query.limit(1);
+    return endpoint;
+  }
+
+  // AI API Usage tracking
+  async createAiApiUsage(usage: InsertAIApiUsage): Promise<AIApiUsage> {
+    const [created] = await db.insert(aiApiUsage).values(usage).returning();
+    return created;
+  }
+
+  async getAiApiUsage(filters: any = {}): Promise<AIApiUsage[]> {
+    let query = db.select().from(aiApiUsage);
+    
+    if (filters.endpointId) {
+      query = query.where(eq(aiApiUsage.endpointId, filters.endpointId));
+    }
+    if (filters.userId) {
+      query = query.where(eq(aiApiUsage.userId, filters.userId));
+    }
+    if (filters.documentId) {
+      query = query.where(eq(aiApiUsage.documentId, filters.documentId));
+    }
+    if (filters.requestType) {
+      query = query.where(eq(aiApiUsage.requestType, filters.requestType));
+    }
+    
+    return await query.orderBy(desc(aiApiUsage.createdAt));
+  }
+
+  async getAiApiUsageStats(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<any> {
+    let query = db
+      .select({
+        totalRequests: count(),
+        successfulRequests: count(sql`CASE WHEN ${aiApiUsage.success} = true THEN 1 END`),
+        totalCost: sql<number>`SUM(${aiApiUsage.cost})`.mapWith(Number),
+        avgResponseTime: sql<number>`AVG(${aiApiUsage.responseTime})`.mapWith(Number),
+        totalTokens: sql<number>`SUM(${aiApiUsage.totalTokens})`.mapWith(Number),
+      })
+      .from(aiApiUsage);
+
+    if (endpointId) {
+      query = query.where(eq(aiApiUsage.endpointId, endpointId));
+    }
+    
+    if (dateRange) {
+      query = query.where(
+        and(
+          sql`${aiApiUsage.createdAt} >= ${dateRange.start}`,
+          sql`${aiApiUsage.createdAt} <= ${dateRange.end}`
+        )
+      );
+    }
+
+    const [stats] = await query;
+    return stats;
+  }
+
+  // OCR Results
+  async createOcrResult(result: InsertOCRResult): Promise<OCRResult> {
+    const [created] = await db.insert(ocrResults).values(result).returning();
+    return created;
+  }
+
+  async getOcrResults(documentId: string): Promise<OCRResult[]> {
+    return await db
+      .select()
+      .from(ocrResults)
+      .where(eq(ocrResults.documentId, documentId))
+      .orderBy(desc(ocrResults.createdAt));
+  }
+
+  async updateOcrResult(id: string, updates: Partial<OCRResult>): Promise<OCRResult> {
+    const [updated] = await db
+      .update(ocrResults)
+      .set(updates)
+      .where(eq(ocrResults.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Document Analysis
+  async createDocumentAnalysis(analysis: InsertDocumentAnalysis): Promise<DocumentAnalysis> {
+    const [created] = await db.insert(documentAnalysis).values(analysis).returning();
+    return created;
+  }
+
+  async getDocumentAnalysis(documentId: string): Promise<DocumentAnalysis[]> {
+    return await db
+      .select()
+      .from(documentAnalysis)
+      .where(eq(documentAnalysis.documentId, documentId))
+      .orderBy(desc(documentAnalysis.createdAt));
+  }
+
+  async updateDocumentAnalysis(id: string, updates: Partial<DocumentAnalysis>): Promise<DocumentAnalysis> {
+    const [updated] = await db
+      .update(documentAnalysis)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documentAnalysis.id, id))
+      .returning();
+    return updated;
+  }
+
+  async validateDocumentAnalysis(id: string, validatedBy: string): Promise<DocumentAnalysis> {
+    const [validated] = await db
+      .update(documentAnalysis)
+      .set({
+        validationStatus: "validated",
+        validatedBy,
+        validatedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(documentAnalysis.id, id))
+      .returning();
+    return validated;
+  }
+
+  // AI Model Performance
+  async createAiModelPerformance(performance: InsertAIModelPerformance): Promise<AIModelPerformance> {
+    const [created] = await db.insert(aiModelPerformance).values(performance).returning();
+    return created;
+  }
+
+  async getAiModelPerformance(endpointId?: string, dateRange?: { start: Date; end: Date }): Promise<AIModelPerformance[]> {
+    let query = db.select().from(aiModelPerformance);
+    
+    if (endpointId) {
+      query = query.where(eq(aiModelPerformance.endpointId, endpointId));
+    }
+    
+    if (dateRange) {
+      query = query.where(
+        and(
+          sql`${aiModelPerformance.date} >= ${dateRange.start}`,
+          sql`${aiModelPerformance.date} <= ${dateRange.end}`
+        )
+      );
+    }
+    
+    return await query.orderBy(desc(aiModelPerformance.date));
+  }
+
+  async updateDailyPerformanceMetrics(endpointId: string, metrics: any): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    await db
+      .insert(aiModelPerformance)
+      .values({
+        endpointId,
+        date: new Date(today),
+        ...metrics
+      })
+      .onConflictDoUpdate({
+        target: [aiModelPerformance.endpointId, aiModelPerformance.date],
+        set: metrics
+      });
+  }
+
+  // Document Workflow
+  async createDocumentWorkflow(workflow: InsertDocumentWorkflow): Promise<DocumentWorkflow> {
+    const [created] = await db.insert(documentWorkflow).values(workflow).returning();
+    return created;
+  }
+
+  async getDocumentWorkflow(documentId: string): Promise<DocumentWorkflow[]> {
+    return await db
+      .select()
+      .from(documentWorkflow)
+      .where(eq(documentWorkflow.documentId, documentId))
+      .orderBy(desc(documentWorkflow.createdAt));
+  }
+
+  async updateDocumentWorkflowStatus(id: string, status: string, updates?: Partial<DocumentWorkflow>): Promise<DocumentWorkflow> {
+    const updateData = {
+      status,
+      updatedAt: new Date(),
+      ...(status === 'completed' && { completedAt: new Date() }),
+      ...updates
+    };
+
+    const [updated] = await db
+      .update(documentWorkflow)
+      .set(updateData)
+      .where(eq(documentWorkflow.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getWorkflowQueue(assignedTo?: string): Promise<DocumentWorkflow[]> {
+    let query = db
+      .select()
+      .from(documentWorkflow)
+      .where(sql`${documentWorkflow.status} IN ('pending', 'processing')`);
+    
+    if (assignedTo) {
+      query = query.where(eq(documentWorkflow.assignedTo, assignedTo));
+    }
+    
+    return await query.orderBy(documentWorkflow.dueDate, documentWorkflow.createdAt);
   }
 }
 
