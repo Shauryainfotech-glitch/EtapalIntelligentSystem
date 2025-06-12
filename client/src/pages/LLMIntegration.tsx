@@ -333,14 +333,16 @@ export default function LLMIntegration() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Top P: {modelConfigurations[selectedModel as keyof typeof modelConfigurations].topP}
+                        Top P: {'topP' in modelConfigurations[selectedModel as keyof typeof modelConfigurations] ? 
+                          (modelConfigurations[selectedModel as keyof typeof modelConfigurations] as any).topP : 'N/A'}
                       </label>
                       <input
                         type="range"
                         min="0"
                         max="1"
                         step="0.1"
-                        defaultValue={modelConfigurations[selectedModel as keyof typeof modelConfigurations].topP}
+                        defaultValue={'topP' in modelConfigurations[selectedModel as keyof typeof modelConfigurations] ? 
+                          (modelConfigurations[selectedModel as keyof typeof modelConfigurations] as any).topP : 0.9}
                         className="w-full"
                       />
                     </div>
