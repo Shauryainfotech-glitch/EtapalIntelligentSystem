@@ -19,6 +19,7 @@ const TAB_TITLES = {
   'outward-register': 'जावक पत्र रजिस्टर',
   'ai-ocr': 'AI OCR Processing',
   'llm-integration': 'LLM Integration',
+  'ai-documentation': 'AI Documentation',
   'communications': 'Communications Hub',
   'cloud-storage': 'Cloud Storage',
   'field-master': 'Field Master',
@@ -45,6 +46,8 @@ export default function Dashboard() {
         return <SecurityRBAC />;
       case 'llm-integration':
         return <LLMIntegration />;
+      case 'ai-documentation':
+        return <DocumentationAI />;
       case 'communications':
         return <Communications />;
       case 'cloud-storage':
