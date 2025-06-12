@@ -6,6 +6,7 @@ import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertDocumentSchema, insertRoleSchema, insertFieldConfigurationSchema } from "@shared/schema";
+import { processDocumentWithAI, performOCR, generateDocumentSummary } from "./aiServices";
 import { z } from "zod";
 
 // Configure multer for file uploads
@@ -72,27 +73,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertDocumentSchema.parse(documentData);
       const document = await storage.createDocument(validatedData);
 
-      // Simulate AI OCR processing
+      // Process document with real AI OCR and analysis
       setTimeout(async () => {
         try {
-          const mockOCRResults = {
-            status: "processed",
-            ocrConfidence: "96.70",
-            ocrText: "शासकीय पत्र\nमहाराष्ट्र राज्य\nजिल्हा पोलिस कार्यालय अहमदनगर\n\nपत्र क्रमांक: २३४५/२०२४\nदिनांक: १३/०६/२०२४\n\nविषय: नवीन योजना संदर्भात",
-            extractedData: {
-              office: "जिल्हा पोलिस कार्यालय अहमदनगर",
-              serialNumber: "२३४५/२०२४",
-              letterDate: new Date("2024-06-13"),
-              subject: "शासन पत्र",
-            },
-            processedBy: userId,
-          };
+          await storage.updateDocument(document.id, { status: "processing" });
           
-          await storage.updateDocument(document.id, mockOCRResults);
+          // Read the uploaded file for OCR processing
+          const filePath = path.join(uploadDir, document.fileName);
+          const fileBuffer = fs.readFileSync(filePath);
+          
+          // Perform OCR using Google Vision API
+          const ocrResult = await performOCR(fileBuffer);
+          
+          if (ocrResult.text) {
+            // Process the OCR text with OpenAI for data extraction
+            const aiResults = await processDocumentWithAI(ocrResult.text, document.fileName);
+            
+            const processedResults = {
+              status: "processed",
+              ocrConfidence: (ocrResult.confidence * 100).toFixed(2),
+              ocrText: ocrResult.text,
+              extractedData: aiResults.extractedData,
+              aiAnalysis: aiResults.aiAnalysis,
+              processedBy: userId,
+            };
+            
+            await storage.updateDocument(document.id, processedResults);
+          } else {
+            await storage.updateDocument(document.id, { 
+              status: "failed",
+              ocrText: "OCR processing failed - unable to extract text",
+              processedBy: userId,
+            });
+          }
         } catch (error) {
-          console.error("Error updating document with OCR results:", error);
+          console.error("Error processing document with AI:", error);
+          await storage.updateDocument(document.id, { 
+            status: "failed",
+            ocrText: `Processing failed: ${error.message}`,
+            processedBy: userId,
+          });
         }
-      }, 3000);
+      }, 2000);
 
       res.json(document);
     } catch (error) {
