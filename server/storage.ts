@@ -53,6 +53,16 @@ import {
   type InsertDocumentTag,
   type BulkOperation,
   type InsertBulkOperation,
+  type DigitalSignature,
+  type InsertDigitalSignature,
+  type SignatureWorkflow,
+  type InsertSignatureWorkflow,
+  type SignatureRequest,
+  type InsertSignatureRequest,
+  type SignatureTemplate,
+  type InsertSignatureTemplate,
+  type SignatureAuditLog,
+  type InsertSignatureAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, count, sql } from "drizzle-orm";
@@ -166,6 +176,42 @@ export interface IStorage {
   getBulkOperations(userId: string): Promise<BulkOperation[]>;
   updateBulkOperation(id: string, updates: Partial<BulkOperation>): Promise<BulkOperation>;
   processBulkOperation(id: string): Promise<void>;
+
+  // Digital Signature Operations
+  createDigitalSignature(signature: InsertDigitalSignature): Promise<DigitalSignature>;
+  getDigitalSignatures(documentId: string): Promise<DigitalSignature[]>;
+  getDigitalSignature(id: string): Promise<DigitalSignature | undefined>;
+  verifyDigitalSignature(id: string): Promise<DigitalSignature>;
+  invalidateDigitalSignature(id: string): Promise<DigitalSignature>;
+
+  // Signature Workflow Operations
+  createSignatureWorkflow(workflow: InsertSignatureWorkflow): Promise<SignatureWorkflow>;
+  getSignatureWorkflows(filters?: any): Promise<SignatureWorkflow[]>;
+  getSignatureWorkflow(id: string): Promise<SignatureWorkflow | undefined>;
+  updateSignatureWorkflow(id: string, updates: Partial<SignatureWorkflow>): Promise<SignatureWorkflow>;
+  completeSignatureWorkflow(id: string): Promise<SignatureWorkflow>;
+  cancelSignatureWorkflow(id: string): Promise<SignatureWorkflow>;
+
+  // Signature Request Operations
+  createSignatureRequest(request: InsertSignatureRequest): Promise<SignatureRequest>;
+  getSignatureRequests(filters?: any): Promise<SignatureRequest[]>;
+  getSignatureRequest(id: string): Promise<SignatureRequest | undefined>;
+  getSignatureRequestByToken(token: string): Promise<SignatureRequest | undefined>;
+  updateSignatureRequest(id: string, updates: Partial<SignatureRequest>): Promise<SignatureRequest>;
+  signDocument(requestId: string, signatureData: any): Promise<SignatureRequest>;
+  declineSignature(requestId: string, reason: string): Promise<SignatureRequest>;
+
+  // Signature Template Operations
+  createSignatureTemplate(template: InsertSignatureTemplate): Promise<SignatureTemplate>;
+  getSignatureTemplates(filters?: any): Promise<SignatureTemplate[]>;
+  getSignatureTemplate(id: string): Promise<SignatureTemplate | undefined>;
+  updateSignatureTemplate(id: string, updates: Partial<SignatureTemplate>): Promise<SignatureTemplate>;
+  deleteSignatureTemplate(id: string): Promise<void>;
+
+  // Signature Audit Operations
+  createSignatureAuditLog(log: InsertSignatureAuditLog): Promise<SignatureAuditLog>;
+  getSignatureAuditLogs(filters?: any): Promise<SignatureAuditLog[]>;
+  getDocumentSignatureHistory(documentId: string): Promise<SignatureAuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -932,6 +978,306 @@ export class DatabaseStorage implements IStorage {
         failedItems: 0 
       })
       .where(eq(bulkOperations.id, id));
+  }
+
+  // Digital Signature Operations
+  async createDigitalSignature(signature: InsertDigitalSignature): Promise<DigitalSignature> {
+    const [created] = await db.insert(digitalSignatures).values(signature).returning();
+    return created;
+  }
+
+  async getDigitalSignatures(documentId: string): Promise<DigitalSignature[]> {
+    return await db
+      .select()
+      .from(digitalSignatures)
+      .where(eq(digitalSignatures.documentId, documentId))
+      .orderBy(desc(digitalSignatures.timestamp));
+  }
+
+  async getDigitalSignature(id: string): Promise<DigitalSignature | undefined> {
+    const [signature] = await db
+      .select()
+      .from(digitalSignatures)
+      .where(eq(digitalSignatures.id, id));
+    return signature;
+  }
+
+  async verifyDigitalSignature(id: string): Promise<DigitalSignature> {
+    const [updated] = await db
+      .update(digitalSignatures)
+      .set({ verificationStatus: "verified" })
+      .where(eq(digitalSignatures.id, id))
+      .returning();
+    return updated;
+  }
+
+  async invalidateDigitalSignature(id: string): Promise<DigitalSignature> {
+    const [updated] = await db
+      .update(digitalSignatures)
+      .set({ isValid: false, verificationStatus: "failed" })
+      .where(eq(digitalSignatures.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Signature Workflow Operations
+  async createSignatureWorkflow(workflow: InsertSignatureWorkflow): Promise<SignatureWorkflow> {
+    const [created] = await db.insert(signatureWorkflows).values(workflow).returning();
+    return created;
+  }
+
+  async getSignatureWorkflows(filters: any = {}): Promise<SignatureWorkflow[]> {
+    const conditions = [];
+    
+    if (filters.status) {
+      conditions.push(eq(signatureWorkflows.status, filters.status));
+    }
+    
+    if (filters.createdBy) {
+      conditions.push(eq(signatureWorkflows.createdBy, filters.createdBy));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(signatureWorkflows)
+        .where(and(...conditions))
+        .orderBy(desc(signatureWorkflows.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(signatureWorkflows)
+      .orderBy(desc(signatureWorkflows.createdAt));
+  }
+
+  async getSignatureWorkflow(id: string): Promise<SignatureWorkflow | undefined> {
+    const [workflow] = await db
+      .select()
+      .from(signatureWorkflows)
+      .where(eq(signatureWorkflows.id, id));
+    return workflow;
+  }
+
+  async updateSignatureWorkflow(id: string, updates: Partial<SignatureWorkflow>): Promise<SignatureWorkflow> {
+    const [updated] = await db
+      .update(signatureWorkflows)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(signatureWorkflows.id, id))
+      .returning();
+    return updated;
+  }
+
+  async completeSignatureWorkflow(id: string): Promise<SignatureWorkflow> {
+    const [updated] = await db
+      .update(signatureWorkflows)
+      .set({ 
+        status: "completed", 
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(signatureWorkflows.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cancelSignatureWorkflow(id: string): Promise<SignatureWorkflow> {
+    const [updated] = await db
+      .update(signatureWorkflows)
+      .set({ 
+        status: "cancelled",
+        updatedAt: new Date()
+      })
+      .where(eq(signatureWorkflows.id, id))
+      .returning();
+    return updated;  
+  }
+
+  // Signature Request Operations
+  async createSignatureRequest(request: InsertSignatureRequest): Promise<SignatureRequest> {
+    const requestWithToken = {
+      ...request,
+      accessToken: `sig_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+    };
+    const [created] = await db.insert(signatureRequests).values(requestWithToken).returning();
+    return created;
+  }
+
+  async getSignatureRequests(filters: any = {}): Promise<SignatureRequest[]> {
+    const conditions = [];
+    
+    if (filters.workflowId) {
+      conditions.push(eq(signatureRequests.workflowId, filters.workflowId));
+    }
+    
+    if (filters.signerId) {
+      conditions.push(eq(signatureRequests.signerId, filters.signerId));
+    }
+    
+    if (filters.status) {
+      conditions.push(eq(signatureRequests.status, filters.status));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(signatureRequests)
+        .where(and(...conditions))
+        .orderBy(desc(signatureRequests.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(signatureRequests)
+      .orderBy(desc(signatureRequests.createdAt));
+  }
+
+  async getSignatureRequest(id: string): Promise<SignatureRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(signatureRequests)
+      .where(eq(signatureRequests.id, id));
+    return request;
+  }
+
+  async getSignatureRequestByToken(token: string): Promise<SignatureRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(signatureRequests)
+      .where(eq(signatureRequests.accessToken, token));
+    return request;
+  }
+
+  async updateSignatureRequest(id: string, updates: Partial<SignatureRequest>): Promise<SignatureRequest> {
+    const [updated] = await db
+      .update(signatureRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(signatureRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async signDocument(requestId: string, signatureData: any): Promise<SignatureRequest> {
+    const [updated] = await db
+      .update(signatureRequests)
+      .set({ 
+        status: "signed",
+        signedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(signatureRequests.id, requestId))
+      .returning();
+    return updated;
+  }
+
+  async declineSignature(requestId: string, reason: string): Promise<SignatureRequest> {
+    const [updated] = await db
+      .update(signatureRequests)
+      .set({ 
+        status: "declined",
+        declinedAt: new Date(),
+        declineReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(signatureRequests.id, requestId))
+      .returning();
+    return updated;
+  }
+
+  // Signature Template Operations
+  async createSignatureTemplate(template: InsertSignatureTemplate): Promise<SignatureTemplate> {
+    const [created] = await db.insert(signatureTemplates).values(template).returning();
+    return created;
+  }
+
+  async getSignatureTemplates(filters: any = {}): Promise<SignatureTemplate[]> {
+    const conditions = [];
+    
+    if (filters.templateType) {
+      conditions.push(eq(signatureTemplates.templateType, filters.templateType));
+    }
+    
+    if (filters.isActive !== undefined) {
+      conditions.push(eq(signatureTemplates.isActive, filters.isActive));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(signatureTemplates)
+        .where(and(...conditions))
+        .orderBy(desc(signatureTemplates.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(signatureTemplates)
+      .where(eq(signatureTemplates.isActive, true))
+      .orderBy(desc(signatureTemplates.createdAt));
+  }
+
+  async getSignatureTemplate(id: string): Promise<SignatureTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(signatureTemplates)
+      .where(eq(signatureTemplates.id, id));
+    return template;
+  }
+
+  async updateSignatureTemplate(id: string, updates: Partial<SignatureTemplate>): Promise<SignatureTemplate> {
+    const [updated] = await db
+      .update(signatureTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(signatureTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSignatureTemplate(id: string): Promise<void> {
+    await db.delete(signatureTemplates).where(eq(signatureTemplates.id, id));
+  }
+
+  // Signature Audit Operations
+  async createSignatureAuditLog(log: InsertSignatureAuditLog): Promise<SignatureAuditLog> {
+    const [created] = await db.insert(signatureAuditLogs).values(log).returning();
+    return created;
+  }
+
+  async getSignatureAuditLogs(filters: any = {}): Promise<SignatureAuditLog[]> {
+    const conditions = [];
+    
+    if (filters.documentId) {
+      conditions.push(eq(signatureAuditLogs.documentId, filters.documentId));
+    }
+    
+    if (filters.workflowId) {
+      conditions.push(eq(signatureAuditLogs.workflowId, filters.workflowId));
+    }
+    
+    if (filters.userId) {
+      conditions.push(eq(signatureAuditLogs.userId, filters.userId));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(signatureAuditLogs)
+        .where(and(...conditions))
+        .orderBy(desc(signatureAuditLogs.timestamp));
+    }
+    
+    return await db
+      .select()
+      .from(signatureAuditLogs)
+      .orderBy(desc(signatureAuditLogs.timestamp));
+  }
+
+  async getDocumentSignatureHistory(documentId: string): Promise<SignatureAuditLog[]> {
+    return await db
+      .select()
+      .from(signatureAuditLogs)
+      .where(eq(signatureAuditLogs.documentId, documentId))
+      .orderBy(desc(signatureAuditLogs.timestamp));
   }
 }
 

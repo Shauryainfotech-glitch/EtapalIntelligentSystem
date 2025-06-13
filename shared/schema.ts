@@ -447,3 +447,140 @@ export type DocumentTag = typeof documentTags.$inferSelect;
 export type InsertDocumentTag = z.infer<typeof insertDocumentTagSchema>;
 export type BulkOperation = typeof bulkOperations.$inferSelect;
 export type InsertBulkOperation = z.infer<typeof insertBulkOperationSchema>;
+
+// Digital Signature Tables
+export const digitalSignatures = pgTable("digital_signatures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  signerId: varchar("signer_id").notNull().references(() => users.id),
+  signerName: varchar("signer_name").notNull(),
+  signerEmail: varchar("signer_email").notNull(),
+  signerRole: varchar("signer_role").notNull(),
+  signatureType: varchar("signature_type").notNull(), // "digital", "electronic", "biometric"
+  signatureData: text("signature_data").notNull(), // Base64 encoded signature image or hash
+  signatureMethod: varchar("signature_method").notNull(), // "canvas", "image_upload", "certificate"
+  certificateInfo: jsonb("certificate_info"), // Digital certificate details
+  signatureHash: varchar("signature_hash").notNull(), // SHA-256 hash for verification
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  location: jsonb("location"), // GPS coordinates if available
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  verificationStatus: varchar("verification_status").default("pending"), // "pending", "verified", "failed"
+  isValid: boolean("is_valid").default(true),
+  metadata: jsonb("metadata").default('{}'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const signatureWorkflows = pgTable("signature_workflows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  workflowName: varchar("workflow_name").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  status: varchar("status").default("pending"), // "pending", "in_progress", "completed", "cancelled"
+  signatureOrder: jsonb("signature_order").notNull(), // Array of signer IDs in order
+  currentStep: integer("current_step").default(0),
+  totalSteps: integer("total_steps").notNull(),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  settings: jsonb("settings").default('{}'), // Workflow configuration
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const signatureRequests = pgTable("signature_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflowId: uuid("workflow_id").notNull().references(() => signatureWorkflows.id, { onDelete: "cascade" }),
+  documentId: uuid("document_id").notNull().references(() => documents.id),
+  requesterId: varchar("requester_id").notNull().references(() => users.id),
+  signerId: varchar("signer_id").notNull().references(() => users.id),
+  signerEmail: varchar("signer_email").notNull(),
+  signerName: varchar("signer_name").notNull(),
+  status: varchar("status").default("pending"), // "pending", "sent", "viewed", "signed", "declined", "expired"
+  signatureType: varchar("signature_type").default("digital"),
+  signaturePosition: jsonb("signature_position"), // X, Y coordinates and page number
+  isRequired: boolean("is_required").default(true),
+  message: text("message"),
+  accessToken: varchar("access_token").unique(),
+  expiresAt: timestamp("expires_at"),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  signedAt: timestamp("signed_at"),
+  declinedAt: timestamp("declined_at"),
+  declineReason: text("decline_reason"),
+  reminderCount: integer("reminder_count").default(0),
+  lastReminderAt: timestamp("last_reminder_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const signatureTemplates = pgTable("signature_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name").notNull(),
+  nameMarathi: varchar("name_marathi"),
+  description: text("description"),
+  templateType: varchar("template_type").notNull(), // "government", "legal", "administrative"
+  signerRoles: jsonb("signer_roles").notNull(), // Array of required roles
+  signatureFields: jsonb("signature_fields").notNull(), // Predefined signature positions
+  approvalFlow: jsonb("approval_flow").notNull(), // Sequential or parallel signing
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const signatureAuditLogs = pgTable("signature_audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").references(() => documents.id),
+  signatureId: uuid("signature_id").references(() => digitalSignatures.id),
+  workflowId: uuid("workflow_id").references(() => signatureWorkflows.id),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action").notNull(), // "created", "signed", "verified", "declined", "expired"
+  details: jsonb("details").default('{}'),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+// Insert schemas for digital signatures
+export const insertDigitalSignatureSchema = createInsertSchema(digitalSignatures).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+
+export const insertSignatureWorkflowSchema = createInsertSchema(signatureWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export const insertSignatureRequestSchema = createInsertSchema(signatureRequests).omit({
+  id: true,
+  accessToken: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSignatureTemplateSchema = createInsertSchema(signatureTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSignatureAuditLogSchema = createInsertSchema(signatureAuditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+// Digital signature types
+export type DigitalSignature = typeof digitalSignatures.$inferSelect;
+export type InsertDigitalSignature = z.infer<typeof insertDigitalSignatureSchema>;
+export type SignatureWorkflow = typeof signatureWorkflows.$inferSelect;
+export type InsertSignatureWorkflow = z.infer<typeof insertSignatureWorkflowSchema>;
+export type SignatureRequest = typeof signatureRequests.$inferSelect;
+export type InsertSignatureRequest = z.infer<typeof insertSignatureRequestSchema>;
+export type SignatureTemplate = typeof signatureTemplates.$inferSelect;
+export type InsertSignatureTemplate = z.infer<typeof insertSignatureTemplateSchema>;
+export type SignatureAuditLog = typeof signatureAuditLogs.$inferSelect;
+export type InsertSignatureAuditLog = z.infer<typeof insertSignatureAuditLogSchema>;
