@@ -17,7 +17,8 @@ import {
   Pause, 
   CheckCircle, 
   XCircle, 
-  Clock, 
+  Clock,
+  Plus, 
   Download, 
   Upload, 
   Trash2,
@@ -138,7 +139,7 @@ export default function BulkOperations() {
 
   const processOperationMutation = useMutation({
     mutationFn: (operationId: string) => 
-      apiRequest(`/api/bulk-operations/${operationId}/process`, { method: 'POST' }),
+      apiRequest(`/api/bulk-operations/${operationId}/process`, 'POST'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-operations'] });
       toast({
@@ -157,7 +158,7 @@ export default function BulkOperations() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
+    if (checked && Array.isArray(documents)) {
       setSelectedDocuments(documents.map((doc: Document) => doc.id));
     } else {
       setSelectedDocuments([]);
@@ -219,7 +220,7 @@ export default function BulkOperations() {
             <div className="flex items-center space-x-2">
               <Package className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">{operations.length}</p>
+                <p className="text-2xl font-bold">{Array.isArray(operations) ? operations.length : 0}</p>
                 <p className="text-sm text-gray-600">एकूण ऑपरेशन्स (Total Operations)</p>
               </div>
             </div>
@@ -309,7 +310,7 @@ export default function BulkOperations() {
                             </div>
                             <Checkbox 
                               checked={operationType === operation.value}
-                              readOnly
+                              disabled
                             />
                           </div>
                         </CardContent>
@@ -327,7 +328,7 @@ export default function BulkOperations() {
                   </Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox 
-                      checked={selectedDocuments.length === documents.length && documents.length > 0}
+                      checked={Array.isArray(documents) && selectedDocuments.length === documents.length && documents.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                     <span className="text-sm">सर्व निवडा (Select All)</span>
@@ -335,7 +336,7 @@ export default function BulkOperations() {
                 </div>
                 
                 <div className="max-h-64 overflow-y-auto border rounded-lg">
-                  {documents.length === 0 ? (
+                  {!Array.isArray(documents) || documents.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
                       <FileX className="mx-auto h-8 w-8 mb-2" />
                       <p>दस्तावेज उपलब्ध नाहीत (No documents available)</p>
@@ -353,7 +354,7 @@ export default function BulkOperations() {
                         >
                           <Checkbox 
                             checked={selectedDocuments.includes(document.id)}
-                            readOnly
+                            disabled
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{document.subject}</p>
