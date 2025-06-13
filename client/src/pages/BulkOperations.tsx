@@ -233,7 +233,7 @@ export default function BulkOperations() {
               <Play className="h-8 w-8 text-yellow-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {operations.filter((op: BulkOperation) => op.status === 'processing').length}
+                  {Array.isArray(operations) ? operations.filter((op: BulkOperation) => op.status === 'processing').length : 0}
                 </p>
                 <p className="text-sm text-gray-600">प्रक्रियेत (Processing)</p>
               </div>
@@ -247,7 +247,7 @@ export default function BulkOperations() {
               <CheckCircle className="h-8 w-8 text-green-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {operations.filter((op: BulkOperation) => op.status === 'completed').length}
+                  {Array.isArray(operations) ? operations.filter((op: BulkOperation) => op.status === 'completed').length : 0}
                 </p>
                 <p className="text-sm text-gray-600">पूर्ण (Completed)</p>
               </div>
@@ -261,7 +261,7 @@ export default function BulkOperations() {
               <XCircle className="h-8 w-8 text-red-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {operations.filter((op: BulkOperation) => op.status === 'failed').length}
+                  {Array.isArray(operations) ? operations.filter((op: BulkOperation) => op.status === 'failed').length : 0}
                 </p>
                 <p className="text-sm text-gray-600">अयशस्वी (Failed)</p>
               </div>
@@ -445,7 +445,7 @@ export default function BulkOperations() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">ऑपरेशन्स लोड करत आहे... (Loading operations...)</p>
           </div>
-        ) : operations.length === 0 ? (
+        ) : !Array.isArray(operations) || operations.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
@@ -454,7 +454,7 @@ export default function BulkOperations() {
             </CardContent>
           </Card>
         ) : (
-          operations.map((operation: BulkOperation) => {
+          Array.isArray(operations) && operations.map((operation: BulkOperation) => {
             const StatusIcon = getStatusIcon(operation.status);
             const OperationIcon = getOperationIcon(operation.operationType);
             const progressPercentage = getProgressPercentage(operation);
