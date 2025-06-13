@@ -1,10 +1,37 @@
 import OpenAI from 'openai';
+import { aiConfig } from './config/index.js';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: aiConfig.openaiApiKey,
 });
 
-export async function processDocumentWithAI(ocrText: string, fileName: string): Promise<any> {
+interface ExtractedData {
+  office?: string | null;
+  recipientName?: string | null;
+  serialNumber?: string | null;
+  letterDate?: string | null;
+  receivedDate?: string | null;
+  author?: string | null;
+  letterType?: string | null;
+  subject?: string | null;
+  topic?: string | null;
+  mobile?: string | null;
+  documentCount?: number | null;
+}
+
+interface AIAnalysisResult {
+  extractedData: ExtractedData;
+  confidence: number;
+  aiAnalysis: {
+    documentType: string;
+    summary: string;
+    processingModel: string;
+    extractionTimestamp: string;
+    error?: string;
+  };
+}
+
+export async function processDocumentWithAI(ocrText: string, fileName: string): Promise<AIAnalysisResult> {
   try {
     const prompt = `
 You are analyzing a Marathi government document. Extract the following information from this OCR text:
@@ -60,6 +87,8 @@ Only return valid JSON. If information is not available, use null for that field
       extractedData: {},
       confidence: 0,
       aiAnalysis: {
+        documentType: "अज्ञात",
+        summary: "विषय अनुपलब्ध",
         error: "AI processing failed",
         processingModel: "GPT-4",
         extractionTimestamp: new Date().toISOString()
@@ -68,12 +97,17 @@ Only return valid JSON. If information is not available, use null for that field
   }
 }
 
-export async function performOCR(imageBuffer: Buffer): Promise<{ text: string; confidence: number }> {
+interface OCRResult {
+  text: string;
+  confidence: number;
+}
+
+export async function performOCR(imageBuffer: Buffer): Promise<OCRResult> {
   try {
     // Using Google Vision API for OCR
     const base64Image = imageBuffer.toString('base64');
     
-    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.GOOGLE_API_KEY}`, {
+    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${aiConfig.googleApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
