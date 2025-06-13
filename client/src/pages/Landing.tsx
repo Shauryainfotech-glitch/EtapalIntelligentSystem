@@ -61,20 +61,32 @@ export default function Landing() {
         {/* Header */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className="bg-primary p-4 rounded-2xl shadow-lg">
-              <FileText className="h-12 w-12 text-white" />
+            <div className="w-24 h-24 flex-shrink-0">
+              <img 
+                src="/sp-office-logo.svg" 
+                alt="SP Office Ahilyanagar Logo" 
+                className="w-full h-full"
+              />
             </div>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-4 font-devanagari">
-            e Patra (ई-पत्र) Advanced System
+          <h1 className="text-5xl font-bold text-blue-900 mb-4 font-devanagari">
+            ई-पत्र (e-Patra)
           </h1>
-          <p className="text-xl text-gray-600 mb-2">
-            जिल्हा पोलिस कार्यालय अहमदनगर
+          <p className="text-2xl text-blue-700 mb-2 font-semibold">
+            SP Office Ahilyanagar
+          </p>
+          <p className="text-xl text-gray-600 mb-4">
+            Superintendent of Police Office, Ahilyanagar
           </p>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             Advanced Government Document Management System with AI-powered OCR, 
             bilingual support, and comprehensive analytics
           </p>
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+            <p className="text-sm text-blue-800 font-medium">
+              Developed by SP Office Ahilyanagar Technical Team
+            </p>
+          </div>
         </div>
 
         {/* Features Grid */}

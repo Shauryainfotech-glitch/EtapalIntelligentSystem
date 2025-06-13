@@ -85,13 +85,18 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-            <div className="bg-primary p-3 rounded-xl shadow-lg">
-              <FileText className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 flex-shrink-0">
+              <img 
+                src="/sp-office-logo.svg" 
+                alt="SP Office Ahilyanagar Logo" 
+                className="w-full h-full"
+              />
             </div>
             {!collapsed && (
               <div className="ml-3">
-                <h1 className="text-xl font-bold text-gray-900 font-devanagari">ई-ट्याल Advanced</h1>
-                <p className="text-xs text-gray-500 font-devanagari">जि. पो. अ. अहमदनगर</p>
+                <h1 className="text-xl font-bold text-blue-900 font-devanagari">ई-पत्र</h1>
+                <p className="text-xs text-blue-600 font-medium">e-Patra System</p>
+                <p className="text-xs text-gray-600 font-devanagari">SP Office Ahilyanagar</p>
               </div>
             )}
           </div>

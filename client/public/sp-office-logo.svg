@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="58" fill="#1e40af" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Inner Circle with Government Emblem Style -->
+  <circle cx="60" cy="60" r="45" fill="#ffffff" opacity="0.1"/>
+  
+  <!-- Government Shield -->
+  <path d="M60 15 L45 25 L45 50 Q45 65 60 75 Q75 65 75 50 L75 25 Z" fill="#ffffff"/>
+  
+  <!-- SP Office Text -->
+  <text x="60" y="92" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10" font-weight="bold">SP OFFICE</text>
+  <text x="60" y="105" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="8">AHILYANAGAR</text>
+  
+  <!-- Central Emblem -->
+  <circle cx="60" cy="45" r="15" fill="#fbbf24"/>
+  <path d="M60 35 L65 40 L60 45 L55 40 Z" fill="#1e40af"/>
+  <circle cx="60" cy="42" r="3" fill="#ffffff"/>
+  
+  <!-- Decorative Elements -->
+  <path d="M30 60 Q45 50 60 60 Q75 50 90 60" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.7"/>
+</svg>
