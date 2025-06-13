@@ -99,7 +99,7 @@ export default function Notifications() {
   });
 
   const markAllAsReadMutation = useMutation({
-    mutationFn: () => apiRequest('/api/notifications/mark-all-read', { method: 'PATCH' }),
+    mutationFn: () => apiRequest('/api/notifications/mark-all-read', 'PATCH'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
@@ -112,7 +112,7 @@ export default function Notifications() {
 
   const deleteNotificationMutation = useMutation({
     mutationFn: (notificationId: string) => 
-      apiRequest(`/api/notifications/${notificationId}`, { method: 'DELETE' }),
+      apiRequest(`/api/notifications/${notificationId}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
@@ -149,8 +149,8 @@ export default function Notifications() {
     return formatDistanceToNow(new Date(dateString), { addSuffix: true });
   };
 
-  const unreadNotifications = notifications.filter((n: Notification) => !n.isRead);
-  const readNotifications = notifications.filter((n: Notification) => n.isRead);
+  const unreadNotifications = Array.isArray(notifications) ? notifications.filter((n: Notification) => !n.isRead) : [];
+  const readNotifications = Array.isArray(notifications) ? notifications.filter((n: Notification) => n.isRead) : [];
 
   return (
     <div className="space-y-6">
@@ -166,7 +166,7 @@ export default function Notifications() {
             <div className="flex items-center space-x-2">
               <BellRing className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">{unreadCount}</p>
+                <p className="text-2xl font-bold">{typeof unreadCount === 'number' ? unreadCount : 0}</p>
                 <p className="text-sm text-gray-600">न वाचलेल्या (Unread)</p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function Notifications() {
             <div className="flex items-center space-x-2">
               <Bell className="h-8 w-8 text-gray-600" />
               <div>
-                <p className="text-2xl font-bold">{notifications.length}</p>
+                <p className="text-2xl font-bold">{Array.isArray(notifications) ? notifications.length : 0}</p>
                 <p className="text-sm text-gray-600">एकूण (Total)</p>
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function Notifications() {
               <AlertTriangle className="h-8 w-8 text-orange-600" />
               <div>
                 <p className="text-2xl font-bold">
-                  {notifications.filter((n: Notification) => n.priority === 'urgent' || n.priority === 'high').length}
+                  {Array.isArray(notifications) ? notifications.filter((n: Notification) => n.priority === 'urgent' || n.priority === 'high').length : 0}
                 </p>
                 <p className="text-sm text-gray-600">उच्च प्राधान्य (High Priority)</p>
               </div>

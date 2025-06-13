@@ -115,11 +115,7 @@ export default function BulkOperations() {
   });
 
   const createOperationMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/bulk-operations', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: (data: any) => apiRequest('/api/bulk-operations', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-operations'] });
       setShowCreateDialog(false);
