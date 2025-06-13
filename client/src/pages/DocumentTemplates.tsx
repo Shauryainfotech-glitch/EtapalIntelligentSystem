@@ -429,7 +429,8 @@ export default function DocumentTemplates() {
             </Card>
           ))
         )}
-      </CardContent>
-    </Card>
+      </div>
+      <Footer />
+    </div>
   );
 }
