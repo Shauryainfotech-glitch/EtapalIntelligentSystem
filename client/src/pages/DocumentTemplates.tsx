@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/Header";
 import { TemplateBuilder } from "@/components/TemplateBuilder";
+import { QuickTemplateCreator } from "@/components/QuickTemplateCreator";
 import { FileText, Plus, Edit, Trash2, Copy, Filter, Search, Download, Settings, Layout, Zap } from "lucide-react";
 
 interface DocumentTemplate {
@@ -54,11 +55,14 @@ const TEMPLATE_TYPES = [
 ];
 
 export default function DocumentTemplates() {
+  const [activeTab, setActiveTab] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
+  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
+  const [builderTemplateId, setBuilderTemplateId] = useState<string | undefined>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -425,7 +429,7 @@ export default function DocumentTemplates() {
             </Card>
           ))
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
