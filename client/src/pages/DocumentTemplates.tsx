@@ -75,7 +75,8 @@ export default function DocumentTemplates() {
       if (selectedCategory) searchParams.append('category', selectedCategory);
       if (selectedType) searchParams.append('templateType', selectedType);
       return apiRequest(`/api/document-templates?${searchParams.toString()}`);
-    }
+    },
+    enabled: true
   });
 
   const createTemplateMutation = useMutation({

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/Header";
 import { 
@@ -69,6 +70,7 @@ export default function Notifications() {
   const [selectedPriority, setSelectedPriority] = useState<string>("");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading, refetch } = useQuery({
@@ -81,6 +83,7 @@ export default function Notifications() {
       if (showUnreadOnly) searchParams.append('isRead', 'false');
       return apiRequest(`/api/notifications?${searchParams.toString()}`);
     },
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
@@ -166,7 +169,7 @@ export default function Notifications() {
             <div className="flex items-center space-x-2">
               <BellRing className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">{typeof unreadCount === 'number' ? unreadCount : 0}</p>
+                <p className="text-2xl font-bold">{Number(unreadCount) || 0}</p>
                 <p className="text-sm text-gray-600">न वाचलेल्या (Unread)</p>
               </div>
             </div>
@@ -299,7 +302,7 @@ export default function Notifications() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">सूचना लोड करत आहे... (Loading notifications...)</p>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : !Array.isArray(notifications) || notifications.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Bell className="mx-auto h-12 w-12 text-gray-400" />
