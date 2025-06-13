@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Brain, Clock, Cloud, Users, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
+import { FileText, Brain, Clock, Cloud, Users, CheckCircle, AlertCircle, TrendingUp, MessageSquare } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export function DashboardOverview() {
