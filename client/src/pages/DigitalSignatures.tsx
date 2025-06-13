@@ -118,27 +118,27 @@ export default function DigitalSignatures() {
   const queryClient = useQueryClient();
 
   // Fetch signature workflows
-  const { data: workflows = [], isLoading: workflowsLoading } = useQuery({
+  const { data: workflows = [], isLoading: workflowsLoading } = useQuery<any[]>({
     queryKey: ["/api/signature-workflows"],
   });
 
   // Fetch signature requests
-  const { data: requests = [], isLoading: requestsLoading } = useQuery({
+  const { data: requests = [], isLoading: requestsLoading } = useQuery<any[]>({
     queryKey: ["/api/signature-requests"],
   });
 
   // Fetch signature templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<any[]>({
     queryKey: ["/api/signature-templates"],
   });
 
   // Fetch documents for workflow creation
-  const { data: documents = [] } = useQuery({
+  const { data: documents = [] } = useQuery<any[]>({
     queryKey: ["/api/documents"],
   });
 
   // Fetch users for signer selection
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
 
@@ -201,10 +201,7 @@ export default function DigitalSignatures() {
   // Create template mutation
   const createTemplateMutation = useMutation({
     mutationFn: async (data: SignatureTemplateForm) => {
-      return await apiRequest("/api/signature-templates", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/signature-templates", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/signature-templates"] });
@@ -227,9 +224,7 @@ export default function DigitalSignatures() {
   // Start workflow mutation
   const startWorkflowMutation = useMutation({
     mutationFn: async (workflowId: string) => {
-      return await apiRequest(`/api/signature-workflows/${workflowId}/start`, {
-        method: "POST",
-      });
+      return await apiRequest(`/api/signature-workflows/${workflowId}/start`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/signature-workflows"] });

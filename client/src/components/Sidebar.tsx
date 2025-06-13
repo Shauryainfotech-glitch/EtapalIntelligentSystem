@@ -14,7 +14,8 @@ import {
   Menu, 
   X,
   Bell,
-  Package
+  Package,
+  FileSignature
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { icon: FileText, text: 'टेम्प्लेट्स', tabKey: 'document-templates' },
     { icon: Bell, text: 'सूचना', tabKey: 'notifications', count: 5 },
     { icon: Package, text: 'बल्क ऑपरेशन्स', tabKey: 'bulk-operations' },
+    { icon: FileSignature, text: 'डिजिटल हस्ताक्षर', tabKey: 'digital-signatures' },
     { icon: MessageSquare, text: 'Communications', tabKey: 'communications', count: 12 },
     { icon: Cloud, text: 'Cloud Storage', tabKey: 'cloud-storage' },
     { icon: Settings, text: 'Field Master', tabKey: 'field-master' },
