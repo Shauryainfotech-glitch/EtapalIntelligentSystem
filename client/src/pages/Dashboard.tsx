@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import NewLetter from "./NewLetter";
 import DocumentRegister from "./DocumentRegister";
 import FieldMaster from "./FieldMaster";
@@ -10,6 +11,9 @@ import DocumentationAI from "./DocumentationAI";
 import Communications from "./Communications";
 import CloudStorage from "./CloudStorage";
 import Analytics from "./Analytics";
+import DocumentTemplates from "./DocumentTemplates";
+import Notifications from "./Notifications";
+import BulkOperations from "./BulkOperations";
 import { DashboardOverview } from "./DashboardOverview";
 
 const TAB_TITLES = {
@@ -20,6 +24,9 @@ const TAB_TITLES = {
   'ai-ocr': 'AI OCR Processing',
   'llm-integration': 'LLM Integration',
   'ai-documentation': 'AI Documentation',
+  'document-templates': 'टेम्प्लेट्स',
+  'notifications': 'सूचना',
+  'bulk-operations': 'बल्क ऑपरेशन्स',
   'communications': 'Communications Hub',
   'cloud-storage': 'Cloud Storage',
   'field-master': 'Field Master',
@@ -48,6 +55,12 @@ export default function Dashboard() {
         return <LLMIntegration />;
       case 'ai-documentation':
         return <DocumentationAI />;
+      case 'document-templates':
+        return <DocumentTemplates />;
+      case 'notifications':
+        return <Notifications />;
+      case 'bulk-operations':
+        return <BulkOperations />;
       case 'communications':
         return <Communications />;
       case 'cloud-storage':
@@ -60,19 +73,22 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header 
-          title={TAB_TITLES[activeTab as keyof typeof TAB_TITLES] || activeTab}
-          subtitle="e Patra (ई-पत्र) - Advanced Document Management System"
-        />
+    <div className="min-h-screen bg-surface flex flex-col">
+      <div className="flex flex-1">
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderContent()}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header 
+            title={TAB_TITLES[activeTab as keyof typeof TAB_TITLES] || activeTab}
+            subtitle="ई-पत्र (e-Patra) - SP Office Ahilyanagar"
+          />
+          
+          <main className="flex-1 overflow-y-auto p-6">
+            {renderContent()}
+          </main>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }
