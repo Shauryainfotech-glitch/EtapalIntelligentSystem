@@ -69,22 +69,17 @@ export default function DocumentTemplates() {
   });
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ['/api/document-templates', { category: selectedCategory, templateType: selectedType }],
-    queryFn: ({ queryKey }) => {
-      const [url, params] = queryKey;
+    queryKey: ['/api/document-templates', selectedCategory, selectedType],
+    queryFn: () => {
       const searchParams = new URLSearchParams();
-      if (params.category) searchParams.append('category', params.category);
-      if (params.templateType) searchParams.append('templateType', params.templateType);
-      return apiRequest(`${url}?${searchParams}`);
+      if (selectedCategory) searchParams.append('category', selectedCategory);
+      if (selectedType) searchParams.append('templateType', selectedType);
+      return apiRequest(`/api/document-templates?${searchParams.toString()}`);
     }
   });
 
   const createTemplateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/document-templates', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: (data: any) => apiRequest('/api/document-templates', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/document-templates'] });
       setShowCreateDialog(false);
@@ -113,11 +108,11 @@ export default function DocumentTemplates() {
     }
   });
 
-  const filteredTemplates = templates.filter((template: DocumentTemplate) =>
+  const filteredTemplates = Array.isArray(templates) ? templates.filter((template: DocumentTemplate) =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (template.nameMarathi && template.nameMarathi.includes(searchTerm)) ||
     template.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   const handleSubmit = () => {
     try {

@@ -72,22 +72,16 @@ export default function Notifications() {
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/notifications', { 
-      type: selectedType, 
-      category: selectedCategory,
-      priority: selectedPriority,
-      isRead: showUnreadOnly ? false : undefined
-    }],
-    queryFn: ({ queryKey }) => {
-      const [url, params] = queryKey;
+    queryKey: ['/api/notifications', selectedType, selectedCategory, selectedPriority, showUnreadOnly],
+    queryFn: () => {
       const searchParams = new URLSearchParams();
-      if (params.type) searchParams.append('type', params.type);
-      if (params.category) searchParams.append('category', params.category);
-      if (params.priority) searchParams.append('priority', params.priority);
-      if (params.isRead !== undefined) searchParams.append('isRead', params.isRead.toString());
-      return apiRequest(`${url}?${searchParams}`);
+      if (selectedType) searchParams.append('type', selectedType);
+      if (selectedCategory) searchParams.append('category', selectedCategory);
+      if (selectedPriority) searchParams.append('priority', selectedPriority);
+      if (showUnreadOnly) searchParams.append('isRead', 'false');
+      return apiRequest(`/api/notifications?${searchParams.toString()}`);
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const { data: unreadCount = 0 } = useQuery({
@@ -97,7 +91,7 @@ export default function Notifications() {
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => 
-      apiRequest(`/api/notifications/${notificationId}/read`, { method: 'PATCH' }),
+      apiRequest(`/api/notifications/${notificationId}/read`, 'PATCH'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
