@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import DocumentTemplates from "@/pages/DocumentTemplates";
 import Notifications from "@/pages/Notifications";
 import BulkOperations from "@/pages/BulkOperations";
+import DigitalSignatures from "@/pages/DigitalSignatures";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/document-templates" component={DocumentTemplates} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/bulk-operations" component={BulkOperations} />
+          <Route path="/digital-signatures" component={DigitalSignatures} />
         </>
       )}
       <Route component={NotFound} />

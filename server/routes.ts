@@ -671,6 +671,307 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Digital Signature API Routes
+  
+  // Signature Workflows
+  app.get('/api/signature-workflows', isAuthenticated, async (req, res) => {
+    try {
+      const workflows = await storage.getSignatureWorkflows(req.query);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching signature workflows:", error);
+      res.status(500).json({ message: "Failed to fetch signature workflows" });
+    }
+  });
+
+  app.post('/api/signature-workflows', isAuthenticated, async (req: any, res) => {
+    try {
+      const workflowData = { ...req.body, createdBy: req.user.claims.sub };
+      const workflow = await storage.createSignatureWorkflow(workflowData);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error creating signature workflow:", error);
+      res.status(500).json({ message: "Failed to create signature workflow" });
+    }
+  });
+
+  app.get('/api/signature-workflows/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.getSignatureWorkflow(id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error fetching signature workflow:", error);
+      res.status(500).json({ message: "Failed to fetch signature workflow" });
+    }
+  });
+
+  app.post('/api/signature-workflows/:id/start', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.updateSignatureWorkflow(id, { 
+        status: "in_progress",
+        updatedAt: new Date()
+      });
+      
+      // Create audit log
+      await storage.createSignatureAuditLog({
+        workflowId: id,
+        userId: req.user.claims.sub,
+        action: "started",
+        details: { message: "Workflow started" }
+      });
+      
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error starting signature workflow:", error);
+      res.status(500).json({ message: "Failed to start signature workflow" });
+    }
+  });
+
+  app.post('/api/signature-workflows/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.completeSignatureWorkflow(id);
+      
+      // Create audit log
+      await storage.createSignatureAuditLog({
+        workflowId: id,
+        userId: req.user.claims.sub,
+        action: "completed",
+        details: { message: "Workflow completed" }
+      });
+      
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error completing signature workflow:", error);
+      res.status(500).json({ message: "Failed to complete signature workflow" });
+    }
+  });
+
+  // Signature Requests
+  app.get('/api/signature-requests', isAuthenticated, async (req, res) => {
+    try {
+      const requests = await storage.getSignatureRequests(req.query);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching signature requests:", error);
+      res.status(500).json({ message: "Failed to fetch signature requests" });
+    }
+  });
+
+  app.post('/api/signature-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const requestData = { ...req.body, requesterId: req.user.claims.sub };
+      const request = await storage.createSignatureRequest(requestData);
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating signature request:", error);
+      res.status(500).json({ message: "Failed to create signature request" });
+    }
+  });
+
+  app.get('/api/signature-requests/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const request = await storage.getSignatureRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error fetching signature request:", error);
+      res.status(500).json({ message: "Failed to fetch signature request" });
+    }
+  });
+
+  app.post('/api/signature-requests/:id/sign', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { signatureData } = req.body;
+      
+      // Create digital signature record
+      const signature = await storage.createDigitalSignature({
+        documentId: req.body.documentId,
+        signerId: req.user.claims.sub,
+        signerName: req.user.claims.first_name + " " + req.user.claims.last_name,
+        signerEmail: req.user.claims.email,
+        signerRole: req.body.signerRole || "user",
+        signatureType: "digital",
+        signatureData: signatureData,
+        signatureMethod: "canvas",
+        signatureHash: `sha256_${Date.now()}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+      });
+
+      // Update signature request
+      const request = await storage.signDocument(id, signatureData);
+      
+      // Create audit log
+      await storage.createSignatureAuditLog({
+        documentId: req.body.documentId,
+        signatureId: signature.id,
+        userId: req.user.claims.sub,
+        action: "signed",
+        details: { signatureMethod: "canvas" }
+      });
+      
+      res.json({ request, signature });
+    } catch (error) {
+      console.error("Error signing document:", error);
+      res.status(500).json({ message: "Failed to sign document" });
+    }
+  });
+
+  app.post('/api/signature-requests/:id/decline', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const request = await storage.declineSignature(id, reason);
+      
+      // Create audit log
+      await storage.createSignatureAuditLog({
+        userId: req.user.claims.sub,
+        action: "declined",
+        details: { reason }
+      });
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error declining signature:", error);
+      res.status(500).json({ message: "Failed to decline signature" });
+    }
+  });
+
+  // Signature Templates
+  app.get('/api/signature-templates', isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getSignatureTemplates(req.query);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching signature templates:", error);
+      res.status(500).json({ message: "Failed to fetch signature templates" });
+    }
+  });
+
+  app.post('/api/signature-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateData = { ...req.body, createdBy: req.user.claims.sub };
+      const template = await storage.createSignatureTemplate(templateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating signature template:", error);
+      res.status(500).json({ message: "Failed to create signature template" });
+    }
+  });
+
+  app.get('/api/signature-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const template = await storage.getSignatureTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching signature template:", error);
+      res.status(500).json({ message: "Failed to fetch signature template" });
+    }
+  });
+
+  app.put('/api/signature-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const template = await storage.updateSignatureTemplate(id, req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating signature template:", error);
+      res.status(500).json({ message: "Failed to update signature template" });
+    }
+  });
+
+  app.delete('/api/signature-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSignatureTemplate(id);
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting signature template:", error);
+      res.status(500).json({ message: "Failed to delete signature template" });
+    }
+  });
+
+  // Digital Signatures
+  app.get('/api/documents/:documentId/signatures', isAuthenticated, async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      const signatures = await storage.getDigitalSignatures(documentId);
+      res.json(signatures);
+    } catch (error) {
+      console.error("Error fetching document signatures:", error);
+      res.status(500).json({ message: "Failed to fetch document signatures" });
+    }
+  });
+
+  app.post('/api/signatures/:id/verify', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const signature = await storage.verifyDigitalSignature(id);
+      
+      // Create audit log
+      await storage.createSignatureAuditLog({
+        signatureId: id,
+        userId: req.user.claims.sub,
+        action: "verified",
+        details: { verifiedBy: req.user.claims.email }
+      });
+      
+      res.json(signature);
+    } catch (error) {
+      console.error("Error verifying signature:", error);
+      res.status(500).json({ message: "Failed to verify signature" });
+    }
+  });
+
+  // Signature Audit Logs
+  app.get('/api/signature-audit-logs', isAuthenticated, async (req, res) => {
+    try {
+      const logs = await storage.getSignatureAuditLogs(req.query);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching signature audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch signature audit logs" });
+    }
+  });
+
+  app.get('/api/documents/:documentId/signature-history', isAuthenticated, async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      const history = await storage.getDocumentSignatureHistory(documentId);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching document signature history:", error);
+      res.status(500).json({ message: "Failed to fetch document signature history" });
+    }
+  });
+
+  // Get users endpoint for signer selection
+  app.get('/api/users', isAuthenticated, async (req, res) => {
+    try {
+      // This would need to be implemented in storage to get all users
+      // For now, returning empty array
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
