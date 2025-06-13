@@ -257,22 +257,122 @@ export const documentWorkflow = pgTable("document_workflow", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Document Templates for standardized government forms
+// Enhanced Document Templates with advanced builder capabilities
 export const documentTemplates = pgTable("document_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 200 }).notNull(),
   nameMarathi: varchar("name_marathi", { length: 200 }),
   description: text("description"),
   descriptionMarathi: text("description_marathi"),
-  category: varchar("category", { length: 100 }).notNull(), // application, complaint, notice, order
+  category: varchar("category", { length: 100 }).notNull(), // application, complaint, notice, order, covering_letter, followup_letter, reminder_letter
   templateType: varchar("template_type", { length: 50 }).notNull(), // government_letter, application_form, complaint_form
-  fields: jsonb("fields").notNull(), // structured field definitions
+  subcategory: varchar("subcategory", { length: 100 }),
+  letterSubtype: varchar("letter_subtype", { length: 50 }), // urgent, normal, confidential
+  fields: jsonb("fields").notNull(), // structured field definitions with types, validation
+  structure: jsonb("structure").default('{}'), // template sections (header, body, footer)
+  styling: jsonb("styling").default('{}'), // CSS styling and formatting
+  variables: jsonb("variables").default('[]'), // dynamic variables and data sources
+  conditions: jsonb("conditions").default('[]'), // conditional logic for fields
+  validation: jsonb("validation").default('{}'), // field validation rules
+  content: text("content"), // HTML template content with placeholders
+  defaultValues: jsonb("default_values").default('{}'), // default field values
+  permissions: jsonb("permissions").default('{}'), // access control
+  tags: jsonb("tags").default('[]'), // categorization tags
   isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(false),
   createdBy: varchar("created_by").notNull(),
   departmentCode: varchar("department_code", { length: 50 }),
   version: varchar("version", { length: 20 }).default("1.0"),
+  parentTemplateId: uuid("parent_template_id").references(() => documentTemplates.id),
+  usageCount: integer("usage_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Template field definitions for advanced form building
+export const templateFields = pgTable("template_fields", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => documentTemplates.id, { onDelete: "cascade" }),
+  fieldName: varchar("field_name", { length: 100 }).notNull(),
+  fieldLabel: varchar("field_label", { length: 200 }).notNull(),
+  fieldLabelMarathi: varchar("field_label_marathi", { length: 200 }),
+  fieldType: varchar("field_type", { length: 50 }).notNull(), // text, textarea, select, checkbox, radio, date, number, email, phone, file, signature
+  dataSource: varchar("data_source", { length: 100 }), // database table or API endpoint
+  dataMapping: jsonb("data_mapping"), // how to map data from source
+  validation: jsonb("validation").default('{}'), // validation rules (required, min, max, pattern)
+  options: jsonb("options").default('[]'), // for select, radio, checkbox fields
+  defaultValue: text("default_value"),
+  placeholder: varchar("placeholder", { length: 200 }),
+  helpText: text("help_text"),
+  helpTextMarathi: text("help_text_marathi"),
+  isRequired: boolean("is_required").default(false),
+  isReadonly: boolean("is_readonly").default(false),
+  isCalculated: boolean("is_calculated").default(false),
+  calculation: text("calculation"), // formula for calculated fields
+  displayOrder: integer("display_order").default(0),
+  section: varchar("section", { length: 50 }).default("main"), // header, main, footer, signature
+  width: varchar("width", { length: 20 }).default("full"), // full, half, quarter, auto
+  conditional: jsonb("conditional").default('{}'), // conditional display logic
+  styling: jsonb("styling").default('{}'), // field-specific styling
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Template sections for structured layout
+export const templateSections = pgTable("template_sections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => documentTemplates.id, { onDelete: "cascade" }),
+  sectionName: varchar("section_name", { length: 100 }).notNull(),
+  sectionTitle: varchar("section_title", { length: 200 }),
+  sectionTitleMarathi: varchar("section_title_marathi", { length: 200 }),
+  sectionType: varchar("section_type", { length: 50 }).notNull(), // header, body, footer, signature, attachment, letterhead
+  content: text("content"), // Section-specific content with placeholders
+  styling: jsonb("styling").default('{}'), // section styling
+  displayOrder: integer("display_order").default(0),
+  isRepeatable: boolean("is_repeatable").default(false),
+  isRequired: boolean("is_required").default(true),
+  conditions: jsonb("conditions").default('{}'), // conditional section display
+  variables: jsonb("variables").default('[]'), // section-specific variables
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Template data sources for dynamic content
+export const templateDataSources = pgTable("template_data_sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => documentTemplates.id, { onDelete: "cascade" }),
+  sourceName: varchar("source_name", { length: 100 }).notNull(),
+  sourceType: varchar("source_type", { length: 50 }).notNull(), // database, api, static, calculated, user_data
+  sourceConfig: jsonb("source_config").notNull(), // connection details, query, endpoint
+  mapping: jsonb("mapping").default('{}'), // field mapping configuration
+  caching: jsonb("caching").default('{}'), // caching configuration
+  refreshInterval: integer("refresh_interval"), // in minutes
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Template usage tracking and analytics
+export const templateUsage = pgTable("template_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => documentTemplates.id),
+  documentId: uuid("document_id").references(() => documents.id),
+  userId: varchar("user_id").notNull(),
+  usageType: varchar("usage_type", { length: 50 }).notNull(), // create, edit, duplicate, export, preview
+  formData: jsonb("form_data"), // captured form data
+  generatedContent: text("generated_content"), // final generated document
+  metadata: jsonb("metadata").default('{}'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Template versions for change tracking
+export const templateVersions = pgTable("template_versions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => documentTemplates.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 20 }).notNull(),
+  changes: text("changes"), // description of changes
+  changedBy: varchar("changed_by").notNull(),
+  templateData: jsonb("template_data").notNull(), // snapshot of template at this version
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Notifications system for user alerts
@@ -382,6 +482,33 @@ export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates
   id: true,
   createdAt: true,
   updatedAt: true,
+  usageCount: true,
+});
+
+export const insertTemplateFieldSchema = createInsertSchema(templateFields).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTemplateSectionSchema = createInsertSchema(templateSections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTemplateDataSourceSchema = createInsertSchema(templateDataSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTemplateUsageSchema = createInsertSchema(templateUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTemplateVersionSchema = createInsertSchema(templateVersions).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
@@ -436,9 +563,19 @@ export type InsertAIModelPerformance = typeof aiModelPerformance.$inferInsert;
 export type DocumentWorkflow = typeof documentWorkflow.$inferSelect;
 export type InsertDocumentWorkflow = typeof documentWorkflow.$inferInsert;
 
-// New feature types
+// Enhanced template types
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
+export type TemplateField = typeof templateFields.$inferSelect;
+export type InsertTemplateField = z.infer<typeof insertTemplateFieldSchema>;
+export type TemplateSection = typeof templateSections.$inferSelect;
+export type InsertTemplateSection = z.infer<typeof insertTemplateSectionSchema>;
+export type TemplateDataSource = typeof templateDataSources.$inferSelect;
+export type InsertTemplateDataSource = z.infer<typeof insertTemplateDataSourceSchema>;
+export type TemplateUsage = typeof templateUsage.$inferSelect;
+export type InsertTemplateUsage = z.infer<typeof insertTemplateUsageSchema>;
+export type TemplateVersion = typeof templateVersions.$inferSelect;
+export type InsertTemplateVersion = z.infer<typeof insertTemplateVersionSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type SavedSearch = typeof savedSearches.$inferSelect;

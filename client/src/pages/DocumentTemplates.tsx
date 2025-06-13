@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/Header";
-import { FileText, Plus, Edit, Trash2, Copy, Filter, Search, Download } from "lucide-react";
+import { TemplateBuilder } from "@/components/TemplateBuilder";
+import { FileText, Plus, Edit, Trash2, Copy, Filter, Search, Download, Settings, Layout, Zap } from "lucide-react";
 
 interface DocumentTemplate {
   id: string;
@@ -31,12 +33,16 @@ interface DocumentTemplate {
 }
 
 const TEMPLATE_CATEGORIES = [
+  { value: "covering_letter", label: "कवरिंग लेटर (Covering Letter)", labelEn: "Covering Letter" },
+  { value: "followup_letter", label: "फॉलोअप लेटर (Followup Letter)", labelEn: "Followup Letter" },
+  { value: "reminder_letter", label: "रिमाइंडर लेटर (Reminder Letter)", labelEn: "Reminder Letter" },
   { value: "application", label: "आवेदन (Application)", labelEn: "Application" },
   { value: "complaint", label: "तक्रार (Complaint)", labelEn: "Complaint" },
   { value: "notice", label: "सूचना (Notice)", labelEn: "Notice" },
   { value: "order", label: "आदेश (Order)", labelEn: "Order" },
   { value: "letter", label: "पत्र (Letter)", labelEn: "Letter" },
-  { value: "certificate", label: "प्रमाणपत्र (Certificate)", labelEn: "Certificate" }
+  { value: "certificate", label: "प्रमाणपत्र (Certificate)", labelEn: "Certificate" },
+  { value: "circular", label: "परिपत्र (Circular)", labelEn: "Circular" }
 ];
 
 const TEMPLATE_TYPES = [
