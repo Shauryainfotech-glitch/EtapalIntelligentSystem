@@ -257,6 +257,85 @@ export const documentWorkflow = pgTable("document_workflow", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Document Templates for standardized government forms
+export const documentTemplates = pgTable("document_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 200 }).notNull(),
+  nameMarathi: varchar("name_marathi", { length: 200 }),
+  description: text("description"),
+  descriptionMarathi: text("description_marathi"),
+  category: varchar("category", { length: 100 }).notNull(), // application, complaint, notice, order
+  templateType: varchar("template_type", { length: 50 }).notNull(), // government_letter, application_form, complaint_form
+  fields: jsonb("fields").notNull(), // structured field definitions
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull(),
+  departmentCode: varchar("department_code", { length: 50 }),
+  version: varchar("version", { length: 20 }).default("1.0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Notifications system for user alerts
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  titleMarathi: varchar("title_marathi", { length: 200 }),
+  message: text("message").notNull(),
+  messageMarathi: text("message_marathi"),
+  type: varchar("type", { length: 50 }).notNull(), // info, warning, error, success
+  category: varchar("category", { length: 50 }).notNull(), // document, workflow, system, ai_processing
+  relatedEntityId: uuid("related_entity_id"), // document ID, workflow ID, etc.
+  relatedEntityType: varchar("related_entity_type", { length: 50 }), // document, workflow, user
+  isRead: boolean("is_read").default(false),
+  priority: varchar("priority", { length: 20 }).default("medium"), // low, medium, high, urgent
+  actionUrl: varchar("action_url", { length: 500 }),
+  metadata: jsonb("metadata"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Saved searches for quick access
+export const savedSearches = pgTable("saved_searches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  nameMarathi: varchar("name_marathi", { length: 100 }),
+  searchQuery: jsonb("search_query").notNull(), // filters, sort, etc.
+  isPublic: boolean("is_public").default(false),
+  category: varchar("category", { length: 50 }).default("general"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Document tags for better organization
+export const documentTags = pgTable("document_tags", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id").notNull().references(() => documents.id),
+  tagName: varchar("tag_name", { length: 100 }).notNull(),
+  tagNameMarathi: varchar("tag_name_marathi", { length: 100 }),
+  tagColor: varchar("tag_color", { length: 20 }).default("#3B82F6"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bulk operations tracking
+export const bulkOperations = pgTable("bulk_operations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").notNull(),
+  operationType: varchar("operation_type", { length: 50 }).notNull(), // bulk_update, bulk_delete, bulk_export
+  totalItems: integer("total_items").notNull(),
+  processedItems: integer("processed_items").default(0),
+  failedItems: integer("failed_items").default(0),
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, processing, completed, failed
+  criteria: jsonb("criteria"), // selection criteria
+  results: jsonb("results"), // operation results
+  errorLog: text("error_log"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -299,6 +378,34 @@ export const insertCloudStorageSchema = createInsertSchema(cloudStorage).omit({
   updatedAt: true,
 });
 
+export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSavedSearchSchema = createInsertSchema(savedSearches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentTagSchema = createInsertSchema(documentTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBulkOperationSchema = createInsertSchema(bulkOperations).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -328,3 +435,15 @@ export type AIModelPerformance = typeof aiModelPerformance.$inferSelect;
 export type InsertAIModelPerformance = typeof aiModelPerformance.$inferInsert;
 export type DocumentWorkflow = typeof documentWorkflow.$inferSelect;
 export type InsertDocumentWorkflow = typeof documentWorkflow.$inferInsert;
+
+// New feature types
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type SavedSearch = typeof savedSearches.$inferSelect;
+export type InsertSavedSearch = z.infer<typeof insertSavedSearchSchema>;
+export type DocumentTag = typeof documentTags.$inferSelect;
+export type InsertDocumentTag = z.infer<typeof insertDocumentTagSchema>;
+export type BulkOperation = typeof bulkOperations.$inferSelect;
+export type InsertBulkOperation = z.infer<typeof insertBulkOperationSchema>;

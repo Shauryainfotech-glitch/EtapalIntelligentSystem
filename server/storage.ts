@@ -12,6 +12,11 @@ import {
   documentAnalysis,
   aiModelPerformance,
   documentWorkflow,
+  documentTemplates,
+  notifications,
+  savedSearches,
+  documentTags,
+  bulkOperations,
   type User,
   type UpsertUser,
   type Document,
@@ -38,6 +43,16 @@ import {
   type InsertAIModelPerformance,
   type DocumentWorkflow,
   type InsertDocumentWorkflow,
+  type DocumentTemplate,
+  type InsertDocumentTemplate,
+  type Notification,
+  type InsertNotification,
+  type SavedSearch,
+  type InsertSavedSearch,
+  type DocumentTag,
+  type InsertDocumentTag,
+  type BulkOperation,
+  type InsertBulkOperation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, like, count, sql } from "drizzle-orm";
@@ -118,6 +133,39 @@ export interface IStorage {
   getDocumentWorkflow(documentId: string): Promise<DocumentWorkflow[]>;
   updateDocumentWorkflowStatus(id: string, status: string, updates?: Partial<DocumentWorkflow>): Promise<DocumentWorkflow>;
   getWorkflowQueue(assignedTo?: string): Promise<DocumentWorkflow[]>;
+
+  // Document Templates
+  createDocumentTemplate(template: InsertDocumentTemplate): Promise<DocumentTemplate>;
+  getDocumentTemplates(filters?: any): Promise<DocumentTemplate[]>;
+  getDocumentTemplate(id: string): Promise<DocumentTemplate | undefined>;
+  updateDocumentTemplate(id: string, updates: Partial<DocumentTemplate>): Promise<DocumentTemplate>;
+  deleteDocumentTemplate(id: string): Promise<void>;
+
+  // Notifications
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotifications(userId: string, filters?: any): Promise<Notification[]>;
+  markNotificationAsRead(id: string): Promise<Notification>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  deleteNotification(id: string): Promise<void>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+
+  // Saved Searches
+  createSavedSearch(search: InsertSavedSearch): Promise<SavedSearch>;
+  getSavedSearches(userId: string): Promise<SavedSearch[]>;
+  updateSavedSearch(id: string, updates: Partial<SavedSearch>): Promise<SavedSearch>;
+  deleteSavedSearch(id: string): Promise<void>;
+
+  // Document Tags
+  createDocumentTag(tag: InsertDocumentTag): Promise<DocumentTag>;
+  getDocumentTags(documentId: string): Promise<DocumentTag[]>;
+  deleteDocumentTag(id: string): Promise<void>;
+  getPopularTags(limit?: number): Promise<{ tagName: string; count: number }[]>;
+
+  // Bulk Operations
+  createBulkOperation(operation: InsertBulkOperation): Promise<BulkOperation>;
+  getBulkOperations(userId: string): Promise<BulkOperation[]>;
+  updateBulkOperation(id: string, updates: Partial<BulkOperation>): Promise<BulkOperation>;
+  processBulkOperation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -674,6 +722,216 @@ export class DatabaseStorage implements IStorage {
       .from(documentWorkflow)
       .where(sql`${documentWorkflow.status} IN ('pending', 'processing')`)
       .orderBy(documentWorkflow.dueDate, documentWorkflow.createdAt);
+  }
+
+  // Document Templates
+  async createDocumentTemplate(template: InsertDocumentTemplate): Promise<DocumentTemplate> {
+    const [created] = await db.insert(documentTemplates).values(template).returning();
+    return created;
+  }
+
+  async getDocumentTemplates(filters: any = {}): Promise<DocumentTemplate[]> {
+    const conditions = [];
+    
+    if (filters.category) {
+      conditions.push(eq(documentTemplates.category, filters.category));
+    }
+    
+    if (filters.templateType) {
+      conditions.push(eq(documentTemplates.templateType, filters.templateType));
+    }
+    
+    if (filters.isActive !== undefined) {
+      conditions.push(eq(documentTemplates.isActive, filters.isActive));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(documentTemplates)
+        .where(and(...conditions))
+        .orderBy(desc(documentTemplates.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(documentTemplates)
+      .orderBy(desc(documentTemplates.createdAt));
+  }
+
+  async getDocumentTemplate(id: string): Promise<DocumentTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(documentTemplates)
+      .where(eq(documentTemplates.id, id));
+    return template;
+  }
+
+  async updateDocumentTemplate(id: string, updates: Partial<DocumentTemplate>): Promise<DocumentTemplate> {
+    const [updated] = await db
+      .update(documentTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documentTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDocumentTemplate(id: string): Promise<void> {
+    await db.delete(documentTemplates).where(eq(documentTemplates.id, id));
+  }
+
+  // Notifications
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async getNotifications(userId: string, filters: any = {}): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
+    
+    if (filters.isRead !== undefined) {
+      conditions.push(eq(notifications.isRead, filters.isRead));
+    }
+    
+    if (filters.type) {
+      conditions.push(eq(notifications.type, filters.type));
+    }
+    
+    if (filters.category) {
+      conditions.push(eq(notifications.category, filters.category));
+    }
+    
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    await db.delete(notifications).where(eq(notifications.id, id));
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return result.count;
+  }
+
+  // Saved Searches
+  async createSavedSearch(search: InsertSavedSearch): Promise<SavedSearch> {
+    const [created] = await db.insert(savedSearches).values(search).returning();
+    return created;
+  }
+
+  async getSavedSearches(userId: string): Promise<SavedSearch[]> {
+    return await db
+      .select()
+      .from(savedSearches)
+      .where(eq(savedSearches.userId, userId))
+      .orderBy(desc(savedSearches.createdAt));
+  }
+
+  async updateSavedSearch(id: string, updates: Partial<SavedSearch>): Promise<SavedSearch> {
+    const [updated] = await db
+      .update(savedSearches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(savedSearches.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSavedSearch(id: string): Promise<void> {
+    await db.delete(savedSearches).where(eq(savedSearches.id, id));
+  }
+
+  // Document Tags
+  async createDocumentTag(tag: InsertDocumentTag): Promise<DocumentTag> {
+    const [created] = await db.insert(documentTags).values(tag).returning();
+    return created;
+  }
+
+  async getDocumentTags(documentId: string): Promise<DocumentTag[]> {
+    return await db
+      .select()
+      .from(documentTags)
+      .where(eq(documentTags.documentId, documentId))
+      .orderBy(documentTags.tagName);
+  }
+
+  async deleteDocumentTag(id: string): Promise<void> {
+    await db.delete(documentTags).where(eq(documentTags.id, id));
+  }
+
+  async getPopularTags(limit: number = 10): Promise<{ tagName: string; count: number }[]> {
+    return await db
+      .select({
+        tagName: documentTags.tagName,
+        count: count()
+      })
+      .from(documentTags)
+      .groupBy(documentTags.tagName)
+      .orderBy(desc(count()))
+      .limit(limit);
+  }
+
+  // Bulk Operations
+  async createBulkOperation(operation: InsertBulkOperation): Promise<BulkOperation> {
+    const [created] = await db.insert(bulkOperations).values(operation).returning();
+    return created;
+  }
+
+  async getBulkOperations(userId: string): Promise<BulkOperation[]> {
+    return await db
+      .select()
+      .from(bulkOperations)
+      .where(eq(bulkOperations.userId, userId))
+      .orderBy(desc(bulkOperations.createdAt));
+  }
+
+  async updateBulkOperation(id: string, updates: Partial<BulkOperation>): Promise<BulkOperation> {
+    const [updated] = await db
+      .update(bulkOperations)
+      .set(updates)
+      .where(eq(bulkOperations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async processBulkOperation(id: string): Promise<void> {
+    const [operation] = await db
+      .select()
+      .from(bulkOperations)
+      .where(eq(bulkOperations.id, id));
+    
+    if (!operation) return;
+    
+    await db
+      .update(bulkOperations)
+      .set({ 
+        status: "processing",
+        processedItems: 0,
+        failedItems: 0 
+      })
+      .where(eq(bulkOperations.id, id));
   }
 }
 
