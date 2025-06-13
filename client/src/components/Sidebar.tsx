@@ -12,7 +12,10 @@ import {
   Settings, 
   Shield, 
   Menu, 
-  X 
+  X,
+  Bell,
+  Package,
+  FileTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +71,9 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { icon: Brain, text: 'AI OCR Processing', tabKey: 'ai-ocr', count: 3 },
     { icon: Bot, text: 'LLM Integration', tabKey: 'llm-integration' },
     { icon: FileText, text: 'AI Documentation', tabKey: 'ai-documentation' },
+    { icon: Template, text: 'टेम्प्लेट्स', tabKey: 'document-templates' },
+    { icon: Bell, text: 'सूचना', tabKey: 'notifications', count: 5 },
+    { icon: Package, text: 'बल्क ऑपरेशन्स', tabKey: 'bulk-operations' },
     { icon: MessageSquare, text: 'Communications', tabKey: 'communications', count: 12 },
     { icon: Cloud, text: 'Cloud Storage', tabKey: 'cloud-storage' },
     { icon: Settings, text: 'Field Master', tabKey: 'field-master' },
