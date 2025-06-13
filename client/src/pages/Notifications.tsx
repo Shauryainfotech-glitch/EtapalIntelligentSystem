@@ -14,14 +14,13 @@ import {
   AlertTriangle, 
   Info, 
   XCircle, 
-  MarkAsUnread,
+  MailOpen,
   Trash2,
   Settings,
   Filter,
   RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { mr } from "date-fns/locale";
 
 interface Notification {
   id: string;

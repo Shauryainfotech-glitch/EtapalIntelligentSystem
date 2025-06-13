@@ -537,6 +537,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document Templates routes
+  app.get('/api/document-templates', isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getDocumentTemplates(req.query);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching document templates:", error);
+      res.status(500).json({ message: "Failed to fetch document templates" });
+    }
+  });
+
+  app.post('/api/document-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateData = { ...req.body, createdBy: req.user.claims.sub };
+      const template = await storage.createDocumentTemplate(templateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating document template:", error);
+      res.status(500).json({ message: "Failed to create document template" });
+    }
+  });
+
+  app.put('/api/document-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const template = await storage.updateDocumentTemplate(id, req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating document template:", error);
+      res.status(500).json({ message: "Failed to update document template" });
+    }
+  });
+
+  app.delete('/api/document-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDocumentTemplate(id);
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting document template:", error);
+      res.status(500).json({ message: "Failed to delete document template" });
+    }
+  });
+
+  // Notifications routes
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const notifications = await storage.getNotifications(userId, req.query);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread notification count:", error);
+      res.status(500).json({ message: "Failed to fetch unread notification count" });
+    }
+  });
+
+  app.post('/api/notifications/:id/mark-read', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.post('/api/notifications/mark-all-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete('/api/notifications/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteNotification(id);
+      res.json({ message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  // Bulk Operations routes
+  app.get('/api/bulk-operations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const operations = await storage.getBulkOperations(userId);
+      res.json(operations);
+    } catch (error) {
+      console.error("Error fetching bulk operations:", error);
+      res.status(500).json({ message: "Failed to fetch bulk operations" });
+    }
+  });
+
+  app.post('/api/bulk-operations', isAuthenticated, async (req: any, res) => {
+    try {
+      const operationData = { ...req.body, userId: req.user.claims.sub };
+      const operation = await storage.createBulkOperation(operationData);
+      res.json(operation);
+    } catch (error) {
+      console.error("Error creating bulk operation:", error);
+      res.status(500).json({ message: "Failed to create bulk operation" });
+    }
+  });
+
+  app.post('/api/bulk-operations/:id/process', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.processBulkOperation(id);
+      res.json({ message: "Bulk operation started" });
+    } catch (error) {
+      console.error("Error processing bulk operation:", error);
+      res.status(500).json({ message: "Failed to process bulk operation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -7,6 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
+import DocumentTemplates from "@/pages/DocumentTemplates";
+import Notifications from "@/pages/Notifications";
+import BulkOperations from "@/pages/BulkOperations";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -19,6 +22,9 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/document-templates" component={DocumentTemplates} />
+          <Route path="/notifications" component={Notifications} />
+          <Route path="/bulk-operations" component={BulkOperations} />
         </>
       )}
       <Route component={NotFound} />
